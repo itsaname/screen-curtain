@@ -1,4 +1,4 @@
-# ScreenCurtain 1.2.0
+﻿# ScreenCurtain 1.2.0
 
 ## Highlights
 
@@ -10,7 +10,7 @@
 - Complete Windows 11 UI with Chinese/English localization. Auto follows the system language; a manual language selector is in Settings > General and takes effect after restart.
 - Setup and uninstaller are now bilingual too. They auto-select the system language; /LANG=EN forces English and /LANG=ZH forces Chinese.
 - Preview 3 seconds now matches the real blackout: same DDC/WMI backlight dimming, audio mute, borderless black layers, DWM square corners and hidden cursor; all are restored after the preview.
-- Logging is asynchronous so a slow network/synced data folder cannot block the UI thread. Watchdog and unhandled failures write a detailed crash report to `%LOCALAPPDATA%\ScreenCurtain\logs\crash-*.log` (and best-effort to the portable data logs).
+- Logging is asynchronous so a slow network/synced data folder cannot block the UI thread. Watchdog and unhandled failures write a detailed crash report to %LOCALAPPDATA%\ScreenCurtain\logs\crash-*.log (and best-effort to the portable data logs).
 - Audio restore now runs after display/overlay restore, verifies mute state, retries, and retries after session unlock.
 - Topmost Guard reduces third-party popups appearing above the black screen.
 - System audio is muted while the screen is dark and restored on wake.
