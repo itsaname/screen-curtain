@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$version = '1.1.9'
+$version = '1.2.0'
 $buildDir = Join-Path $root 'build'
 $distRoot = Join-Path $root ('dist\' + $version)
 $installerDir = Join-Path $distRoot 'installer'
@@ -116,6 +116,7 @@ $notes = @"
 - Laptops with a battery default to overlay-only blackout; a separate opt-in "laptop physical off" setting is available and defaults off.
 - Laptop backlight-only mode: external panels use DDC/CI luminance (VCP 0x10) set to 0; internal panels use WMI WmiSetBrightness(0) when available. The monitors remain powered, so their USB hubs and keyboard/mouse stay alive. Original luminance is restored on wake. No VCP 0xD6 power-mode command is sent.
 - Complete Windows 11 UI with Chinese/English localization. Auto follows the system language; a manual language selector is in Settings > General and takes effect after restart.
+- Setup and uninstaller are now bilingual too. They auto-select the system language; `/LANG=EN` forces English and `/LANG=ZH` forces Chinese.
 - `Preview 3 seconds` now matches the real blackout: same DDC/WMI backlight dimming, audio mute, borderless black layers, DWM square corners and hidden cursor; all are restored after the preview.
 - Audio restore now runs after display/overlay restore, verifies mute state, retries, and retries after session unlock.
 - Topmost Guard reduces third-party popups appearing above the black screen.

@@ -16,7 +16,7 @@ namespace ScreenCurtain
                 }
                 catch
                 {
-                    return "1.1.9";
+                    return "1.2.0";
                 }
             }
         }
@@ -26,7 +26,7 @@ namespace ScreenCurtain
             get
             {
                 try { return Assembly.GetExecutingAssembly().GetName().Version.ToString(); }
-                catch { return "1.1.9.0"; }
+                catch { return "1.2.0.0"; }
             }
         }
     }

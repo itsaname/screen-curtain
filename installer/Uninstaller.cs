@@ -14,6 +14,7 @@ namespace ScreenCurtain.Setup
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            SetupLang.Initialize(args);
             bool silent = false;
             for (int i = 0; i < args.Length; i++)
             {
@@ -69,7 +70,7 @@ namespace ScreenCurtain.Setup
             StopApplication();
             if (HasGuardBackup && !RepairGuard())
             {
-                throw new InvalidOperationException("未能恢复 Windows Update 设置，已停止卸载。");
+                throw new InvalidOperationException(SetupLang.T("未能恢复 Windows Update 设置，已停止卸载。", "Could not restore Windows Update settings; uninstallation stopped."));
             }
             Remove(deleteUserData);
         }
@@ -78,7 +79,7 @@ namespace ScreenCurtain.Setup
         {
             if (!ProcessHelper.StopRunningApp(AppPath))
             {
-                throw new InvalidOperationException("幕帘仍在运行。请先退出幕帘，再重试卸载。");
+                throw new InvalidOperationException(SetupLang.T("幕帘仍在运行。请先退出幕帘，再重试卸载。", "ScreenCurtain is still running. Exit it and retry the uninstallation."));
             }
         }
 
@@ -129,18 +130,18 @@ namespace ScreenCurtain.Setup
         {
             if (!Directory.Exists(InstallDir))
             {
-                throw new InvalidOperationException("安装目录不存在。");
+                throw new InvalidOperationException(SetupLang.T("安装目录不存在。", "Installation directory does not exist."));
             }
             if (!File.Exists(Path.Combine(InstallDir, SetupInfo.AppExe)) ||
                 !File.Exists(Path.Combine(InstallDir, SetupInfo.UninstallerExe)))
             {
-                throw new InvalidOperationException("当前目录不包含完整的幕帘安装文件，已停止卸载以防误删。");
+                throw new InvalidOperationException(SetupLang.T("当前目录不包含完整的幕帘安装文件，已停止卸载以防误删。", "This folder does not contain a complete ScreenCurtain installation; uninstallation stopped to avoid deleting the wrong files."));
             }
             string root = Path.GetPathRoot(InstallDir);
             if (string.Equals(InstallDir, root, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(InstallDir, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException("拒绝删除不安全的安装目录。");
+                throw new InvalidOperationException(SetupLang.T("拒绝删除不安全的安装目录。", "Refusing to delete an unsafe installation directory."));
             }
         }
 
@@ -201,7 +202,7 @@ namespace ScreenCurtain.Setup
         public UninstallForm(UninstallEngine engine)
         {
             _engine = engine;
-            Text = "卸载幕帘";
+            Text = SetupLang.T("卸载幕帘", "Uninstall ScreenCurtain");
             Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -214,33 +215,35 @@ namespace ScreenCurtain.Setup
             try { Icon = Icon.ExtractAssociatedIcon(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, SetupInfo.AppExe)); } catch { }
 
             Label title = new Label();
-            title.Text = "卸载幕帘";
+            title.Text = SetupLang.T("卸载幕帘", "Uninstall ScreenCurtain");
             title.Font = new Font("Microsoft YaHei UI", 17F, FontStyle.Bold);
-            title.SetBounds(24, 20, 300, 38);
+            title.SetBounds(24, 20, 380, 38);
             Controls.Add(title);
 
             Label text = new Label();
-            text.Text = "将删除程序文件、开始菜单/桌面快捷方式和“应用与功能”卸载项。\n\n如果存在更新保护，卸载前会请求管理员权限恢复 Windows Update 原始设置。";
+            text.Text = SetupLang.T(
+                "将删除程序文件、开始菜单/桌面快捷方式和“应用与功能”卸载项。\n\n如果存在更新保护，卸载前会请求管理员权限恢复 Windows Update 原始设置。",
+                "This removes the program files, Start menu/desktop shortcuts and the Apps & features entry.\n\nIf update protection exists, administrator rights are requested first to restore the original Windows Update settings.");
             text.Font = new Font("Microsoft YaHei UI", 9F);
             text.ForeColor = Color.FromArgb(70, 70, 70);
             text.SetBounds(26, 72, 462, 132);
             Controls.Add(text);
 
             _deleteData = new CheckBox();
-            _deleteData.Text = "同时删除我的幕帘设置和日志";
-            _deleteData.SetBounds(26, 210, 380, 26);
+            _deleteData.Text = SetupLang.T("同时删除我的幕帘设置和日志", "Also delete my ScreenCurtain settings and logs");
+            _deleteData.SetBounds(26, 210, 420, 26);
             _deleteData.BackColor = Color.Transparent;
             Controls.Add(_deleteData);
 
             _status = new Label();
-            _status.Text = "准备卸载";
+            _status.Text = SetupLang.T("准备卸载", "Ready to uninstall");
             _status.Font = new Font("Microsoft YaHei UI", 8.5F);
             _status.ForeColor = Color.FromArgb(95, 95, 95);
             _status.SetBounds(26, 242, 460, 22);
             Controls.Add(_status);
 
             _cancel = new Button();
-            _cancel.Text = "取消";
+            _cancel.Text = SetupLang.T("取消", "Cancel");
             _cancel.SetBounds(320, 306, 80, 36);
             _cancel.FlatStyle = FlatStyle.Flat;
             _cancel.BackColor = Color.White;
@@ -248,7 +251,7 @@ namespace ScreenCurtain.Setup
             Controls.Add(_cancel);
 
             _uninstall = new Button();
-            _uninstall.Text = "卸载";
+            _uninstall.Text = SetupLang.T("卸载", "Uninstall");
             _uninstall.SetBounds(410, 306, 86, 38);
             _uninstall.FlatStyle = FlatStyle.Flat;
             _uninstall.FlatAppearance.BorderSize = 0;
@@ -277,7 +280,7 @@ namespace ScreenCurtain.Setup
             _uninstall.Enabled = false;
             _cancel.Enabled = false;
             _deleteData.Enabled = false;
-            _status.Text = "正在准备卸载…";
+            _status.Text = SetupLang.T("正在准备卸载…", "Preparing to uninstall…");
             Application.DoEvents();
 
             try
@@ -285,14 +288,15 @@ namespace ScreenCurtain.Setup
                 _engine.StopApplication();
                 if (_engine.HasGuardBackup)
                 {
-                    _status.Text = "正在恢复 Windows Update 设置…";
+                    _status.Text = SetupLang.T("正在恢复 Windows Update 设置…", "Restoring Windows Update settings…");
                     Application.DoEvents();
                     if (!_engine.RepairGuard())
                     {
                         bool continueWithoutRepair = MessageBox.Show(
                             this,
-                            "未能恢复 Windows Update 设置。继续卸载可能遗留临时更新策略。\n\n是否仍然卸载？",
-                            "恢复设置失败",
+                            SetupLang.T("未能恢复 Windows Update 设置。继续卸载可能遗留临时更新策略。\n\n是否仍然卸载？",
+                                "Could not restore Windows Update settings. Continuing may leave temporary update policy behind.\n\nUninstall anyway?"),
+                            SetupLang.T("恢复设置失败", "Restore failed"),
                             MessageBoxButtons.YesNo,
                             MessageBoxIcon.Warning,
                             MessageBoxDefaultButton.Button2) == DialogResult.Yes;
@@ -302,17 +306,19 @@ namespace ScreenCurtain.Setup
                             _uninstall.Enabled = true;
                             _cancel.Enabled = true;
                             _deleteData.Enabled = true;
-                            _status.Text = "已取消卸载";
+                            _status.Text = SetupLang.T("已取消卸载", "Uninstallation cancelled");
                             return;
                         }
                     }
                 }
 
-                _status.Text = "正在删除程序文件…";
+                _status.Text = SetupLang.T("正在删除程序文件…", "Deleting program files…");
                 Application.DoEvents();
                 _engine.Remove(_deleteData.Checked);
-                _status.Text = "卸载完成";
-                MessageBox.Show(this, "幕帘已卸载。\n\n如果安装目录未立即消失，它会在几秒后自动删除。", "卸载幕帘", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                _status.Text = SetupLang.T("卸载完成", "Uninstallation complete");
+                MessageBox.Show(this, SetupLang.T("幕帘已卸载。\n\n如果安装目录未立即消失，它会在几秒后自动删除。",
+                        "ScreenCurtain is uninstalled.\n\nIf the installation folder does not disappear immediately, it will be removed in a few seconds."),
+                    SetupLang.T("卸载幕帘", "Uninstall ScreenCurtain"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Close();
             }
             catch (Exception ex)
@@ -322,8 +328,9 @@ namespace ScreenCurtain.Setup
                 _uninstall.Enabled = true;
                 _cancel.Enabled = true;
                 _deleteData.Enabled = true;
-                _status.Text = "卸载失败";
-                MessageBox.Show(this, "卸载失败：\n" + ex.Message, "幕帘", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                _status.Text = SetupLang.T("卸载失败", "Uninstallation failed");
+                MessageBox.Show(this, SetupLang.T("卸载失败：\n", "Uninstallation failed:\n") + ex.Message,
+                    SetupLang.T("幕帘", "ScreenCurtain"), MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }

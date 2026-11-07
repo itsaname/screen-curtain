@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -10,6 +11,35 @@ using Microsoft.Win32;
 
 namespace ScreenCurtain.Setup
 {
+    internal static class SetupLang
+    {
+        public static bool English { get; private set; }
+
+        public static void Initialize(string[] args)
+        {
+            English = !string.Equals(CultureInfo.CurrentUICulture.TwoLetterISOLanguageName, "zh",
+                StringComparison.OrdinalIgnoreCase);
+            for (int i = 0; i < args.Length; i++)
+            {
+                string arg = args[i] ?? string.Empty;
+                if (string.Equals(arg, "/LANG=EN", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(arg, "/LANG=EN-US", StringComparison.OrdinalIgnoreCase))
+                {
+                    English = true;
+                }
+                else if (string.Equals(arg, "/LANG=ZH", StringComparison.OrdinalIgnoreCase) ||
+                         string.Equals(arg, "/LANG=ZH-CN", StringComparison.OrdinalIgnoreCase))
+                {
+                    English = false;
+                }
+            }
+        }
+
+        public static string T(string chinese, string english)
+        {
+            return English ? english : chinese;
+        }
+    }
     internal static class SetupDpi
     {
         [DllImport("user32.dll")]
@@ -41,7 +71,7 @@ namespace ScreenCurtain.Setup
     {
         public const string ProductName = "幕帘 ScreenCurtain";
         public const string ShortName = "幕帘";
-        public const string Version = "1.1.9";
+        public const string Version = "1.2.0";
         public const string AppExe = "ScreenCurtain.exe";
         public const string AppConfig = "ScreenCurtain.exe.config";
         public const string UninstallerExe = "Uninstall.exe";
@@ -86,7 +116,7 @@ namespace ScreenCurtain.Setup
 
         public static string StartMenuUninstallShortcut
         {
-            get { return Path.Combine(StartMenuFolder, "卸载" + ShortName + ".lnk"); }
+            get { return Path.Combine(StartMenuFolder, SetupLang.T("卸载幕帘", "Uninstall ScreenCurtain") + ".lnk"); }
         }
 
         public static string UserDataDir
@@ -346,11 +376,11 @@ namespace ScreenCurtain.Setup
         {
             string app = Path.Combine(installDir, SetupInfo.AppExe);
             string uninstaller = Path.Combine(installDir, SetupInfo.UninstallerExe);
-            ShortcutHelper.Create(SetupInfo.StartMenuShortcut, app, string.Empty, installDir, "幕帘 ScreenCurtain", app);
-            ShortcutHelper.Create(SetupInfo.StartMenuUninstallShortcut, uninstaller, string.Empty, installDir, "卸载幕帘 ScreenCurtain", app);
+            ShortcutHelper.Create(SetupInfo.StartMenuShortcut, app, string.Empty, installDir, SetupLang.T("幕帘 ScreenCurtain", "ScreenCurtain"), app);
+            ShortcutHelper.Create(SetupInfo.StartMenuUninstallShortcut, uninstaller, string.Empty, installDir, SetupLang.T("卸载幕帘 ScreenCurtain", "Uninstall ScreenCurtain"), app);
             if (desktop)
             {
-                ShortcutHelper.Create(SetupInfo.DesktopShortcut, app, string.Empty, installDir, "幕帘 ScreenCurtain", app);
+                ShortcutHelper.Create(SetupInfo.DesktopShortcut, app, string.Empty, installDir, SetupLang.T("幕帘 ScreenCurtain", "ScreenCurtain"), app);
             }
         }
 

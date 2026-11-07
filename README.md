@@ -4,9 +4,10 @@
 
 Windows 11 全屏熄屏与 Windows Update 重启防护工具。它按需让所有显示器进入纯黑无边框全屏，尝试关闭显示器物理背光；只有鼠标点击或键盘按键才恢复。运行期间可临时暂停 Windows 自动更新，并阻止更新触发的重启。
 
-当前版本：**1.1.9**。
+当前版本：**1.2.0**。
 
-> 1.1.9 修复/优化：
+> 1.2.0 修复/优化：
+> - 安装器/卸载器增加英文界面：按系统语言自动选择，也可用 `/LANG=EN` 强制英文；英文系统下不会显示中文界面。
 > - 增加英文界面：默认跟随系统语言，可在“设置 > 常规 > 界面语言 / Language”选择自动、中文或 English，重启后生效；主窗口、设置、首次向导、托盘菜单和对话框均已英文化。
 > - “预览 3 秒”现在复用实际熄屏的背光/WMI 调光、静音、无边框黑层、DWM 无圆角和隐藏光标设置；3 秒后按相同顺序恢复。
 > - 更新保护握手：辅助进程先发 `HELLO`，客户端回 `OK`，再应用策略并返回 `ACTIVE`；修复 UAC 同意后卡在“正在请求管理员权限”。
@@ -19,15 +20,15 @@ Windows 11 全屏熄屏与 Windows Update 重启防护工具。它按需让所�
 ## 下载与安装
 
 - **安装版（按用户安装，不需要管理员权限）**  
-  `dist\1.1.9\installer\ScreenCurtain-Setup-1.1.9.exe`
+  `dist\1.2.0\installer\ScreenCurtain-Setup-1.2.0.exe`
 - **绿色版（解压即用）**  
-  `dist\1.1.9\portable\ScreenCurtain-1.1.9-portable.zip`
+  `dist\1.2.0\portable\ScreenCurtain-1.2.0-portable.zip`
 
 安装版默认安装到 `%LOCALAPPDATA%\Programs\ScreenCurtain`，创建开始菜单/可选桌面快捷方式和“应用与功能”卸载项。安装器本身不写 HKLM；更新保护只在运行时请求 UAC。
 
 绿色版解压后直接运行 `ScreenCurtain.exe`；配置、日志和音频恢复标记保存在同目录 `data\`，不创建快捷方式或卸载项。若目录不可写，会自动回退到 `%LOCALAPPDATA%\ScreenCurtain` 并显示说明。
 
-> 产物没有代码签名证书，Windows SmartScreen 可能提示未知发布者。请使用 `dist\1.1.9\SHA256SUMS.txt` 校验下载/拷贝的文件。
+> 产物没有代码签名证书，Windows SmartScreen 可能提示未知发布者。请使用 `dist\1.2.0\SHA256SUMS.txt` 校验下载/拷贝的文件。
 
 ## 主要功能
 
@@ -174,7 +175,7 @@ ScreenCurtain.exe --repair-update      # 提权恢复遗留更新策略（卸载
 
 - [设计约束与实现方案](docs/design.md)
 - [完整 UI/UX 设计规范](docs/ui-design.md)
-- [发布说明](dist/1.1.9/RELEASE-NOTES.md)
+- [发布说明](dist/1.2.0/RELEASE-NOTES.md)
 
 ## 隐私
 

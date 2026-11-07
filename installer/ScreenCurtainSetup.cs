@@ -14,6 +14,7 @@ namespace ScreenCurtain.Setup
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            SetupLang.Initialize(args);
             SetupOptions options = SetupOptions.Parse(args);
             SetupLog.Initialize(options.LogPath);
             SetupLog.Write("安装器启动；静默={0}，目录={1}", options.Silent, options.InstallDir);
@@ -49,27 +50,27 @@ namespace ScreenCurtain.Setup
             if (string.IsNullOrWhiteSpace(installDir) ||
                 string.Equals(installDir, Path.GetPathRoot(installDir), StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException("安装目录无效。");
+                throw new InvalidOperationException(SetupLang.T("安装目录无效。", "Invalid installation directory."));
             }
 
-            if (progress != null) progress("检查目录…");
+            if (progress != null) progress(SetupLang.T("检查目录…", "Checking the folder…"));
             Directory.CreateDirectory(installDir);
             string probe = Path.Combine(installDir, ".sc-write-test");
             File.WriteAllText(probe, "test");
             File.Delete(probe);
 
             string appPath = Path.Combine(installDir, SetupInfo.AppExe);
-            if (progress != null) progress("关闭正在运行的幕帘…");
+            if (progress != null) progress(SetupLang.T("关闭正在运行的幕帘…", "Closing a running ScreenCurtain…"));
             if (!ProcessHelper.StopRunningApp(appPath))
             {
-                throw new InvalidOperationException("幕帘仍在运行。请先退出幕帘，再重试安装。");
+                throw new InvalidOperationException(SetupLang.T("幕帘仍在运行。请先退出幕帘，再重试安装。", "ScreenCurtain is still running. Exit it and retry the installation."));
             }
 
             string staging = Path.Combine(Path.GetTempPath(), "ScreenCurtainStage-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(staging);
             try
             {
-                if (progress != null) progress("准备安装文件…");
+                if (progress != null) progress(SetupLang.T("准备安装文件…", "Preparing installation files…"));
                 Payload.Extract("Payload.ScreenCurtain.exe", Path.Combine(staging, SetupInfo.AppExe));
                 Payload.Extract("Payload.ScreenCurtain.exe.config", Path.Combine(staging, SetupInfo.AppConfig));
                 Payload.Extract("Payload.Uninstall.exe", Path.Combine(staging, SetupInfo.UninstallerExe));
@@ -84,19 +85,19 @@ namespace ScreenCurtain.Setup
 
                 if (!options.NoShortcuts)
                 {
-                    if (progress != null) progress("创建快捷方式…");
+                    if (progress != null) progress(SetupLang.T("创建快捷方式…", "Creating shortcuts…"));
                     ShellIntegration.CreateShortcuts(installDir, !options.NoDesktop);
                 }
                 if (!options.NoArp)
                 {
-                    if (progress != null) progress("注册应用与功能…");
+                    if (progress != null) progress(SetupLang.T("注册应用与功能…", "Registering in Apps & features…"));
                     InstallRegistry.Register(installDir);
                 }
 
                 SetupLog.Write("安装完成：{0}", installDir);
                 if (!options.NoRun)
                 {
-                    if (progress != null) progress("启动幕帘…");
+                    if (progress != null) progress(SetupLang.T("启动幕帘…", "Starting ScreenCurtain…"));
                     ProcessHelper.Launch(appPath);
                 }
             }
@@ -126,7 +127,7 @@ namespace ScreenCurtain.Setup
         public SetupForm(SetupOptions options)
         {
             _options = options;
-            Text = "安装幕帘";
+            Text = SetupLang.T("安装幕帘", "Install ScreenCurtain");
             Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -139,14 +140,15 @@ namespace ScreenCurtain.Setup
             try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
 
             Label title = new Label();
-            title.Text = "安装幕帘";
+            title.Text = SetupLang.T("安装幕帘", "Install ScreenCurtain");
             title.Font = new Font("Microsoft YaHei UI", 18F, FontStyle.Bold);
             title.AutoSize = false;
-            title.SetBounds(24, 18, 300, 40);
+            title.SetBounds(24, 18, 420, 40);
             Controls.Add(title);
 
             Label subtitle = new Label();
-            subtitle.Text = "按用户安装，不需要管理员权限。更新保护只在运行时请求 UAC。";
+            subtitle.Text = SetupLang.T("按用户安装，不需要管理员权限。更新保护只在运行时请求 UAC。",
+                "Per-user install; no admin rights. Update protection requests UAC only while running.");
             subtitle.Font = new Font("Microsoft YaHei UI", 8.5F);
             subtitle.ForeColor = Color.FromArgb(95, 95, 95);
             subtitle.AutoSize = false;
@@ -160,10 +162,10 @@ namespace ScreenCurtain.Setup
             Controls.Add(card);
 
             Label pathLabel = new Label();
-            pathLabel.Text = "安装位置";
+            pathLabel.Text = SetupLang.T("安装位置", "Install location");
             pathLabel.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
             pathLabel.AutoSize = false;
-            pathLabel.SetBounds(18, 18, 120, 22);
+            pathLabel.SetBounds(18, 18, 140, 22);
             card.Controls.Add(pathLabel);
 
             _path = new TextBox();
@@ -174,7 +176,7 @@ namespace ScreenCurtain.Setup
             card.Controls.Add(_path);
 
             Button browse = new Button();
-            browse.Text = "浏览…";
+            browse.Text = SetupLang.T("浏览…", "Browse…");
             browse.SetBounds(438, 42, 74, 28);
             browse.FlatStyle = FlatStyle.Flat;
             browse.Click += delegate
@@ -182,7 +184,7 @@ namespace ScreenCurtain.Setup
                 if (_busy) return;
                 using (FolderBrowserDialog dialog = new FolderBrowserDialog())
                 {
-                    dialog.Description = "选择幕帘安装目录";
+                    dialog.Description = SetupLang.T("选择幕帘安装目录", "Choose the ScreenCurtain installation folder");
                     dialog.SelectedPath = _path.Text;
                     if (dialog.ShowDialog(this) == DialogResult.OK) _path.Text = dialog.SelectedPath;
                 }
@@ -190,7 +192,8 @@ namespace ScreenCurtain.Setup
             card.Controls.Add(browse);
 
             Label note = new Label();
-            note.Text = "创建开始菜单入口和卸载项；不修改系统更新设置。";
+            note.Text = SetupLang.T("创建开始菜单入口和卸载项；不修改系统更新设置。",
+                "Creates Start menu and uninstall entries; does not modify Windows Update settings.");
             note.Font = new Font("Microsoft YaHei UI", 8.5F);
             note.ForeColor = Color.FromArgb(95, 95, 95);
             note.AutoSize = false;
@@ -198,21 +201,21 @@ namespace ScreenCurtain.Setup
             card.Controls.Add(note);
 
             _desktop = new CheckBox();
-            _desktop.Text = "创建桌面快捷方式";
+            _desktop.Text = SetupLang.T("创建桌面快捷方式", "Create a desktop shortcut");
             _desktop.Checked = !options.NoDesktop;
             _desktop.BackColor = Color.White;
-            _desktop.SetBounds(18, 136, 240, 26);
+            _desktop.SetBounds(18, 136, 280, 26);
             card.Controls.Add(_desktop);
 
             _run = new CheckBox();
-            _run.Text = "安装完成后启动幕帘";
+            _run.Text = SetupLang.T("安装完成后启动幕帘", "Launch ScreenCurtain after installation");
             _run.Checked = !options.NoRun;
             _run.BackColor = Color.White;
-            _run.SetBounds(18, 166, 260, 26);
+            _run.SetBounds(18, 166, 320, 26);
             card.Controls.Add(_run);
 
             _status = new Label();
-            _status.Text = "准备安装";
+            _status.Text = SetupLang.T("准备安装", "Ready to install");
             _status.Font = new Font("Microsoft YaHei UI", 8.5F);
             _status.ForeColor = Color.FromArgb(95, 95, 95);
             _status.AutoSize = false;
@@ -220,7 +223,7 @@ namespace ScreenCurtain.Setup
             card.Controls.Add(_status);
 
             _cancel = new Button();
-            _cancel.Text = "取消";
+            _cancel.Text = SetupLang.T("取消", "Cancel");
             _cancel.SetBounds(382, 360, 80, 36);
             _cancel.FlatStyle = FlatStyle.Flat;
             _cancel.BackColor = Color.White;
@@ -228,7 +231,7 @@ namespace ScreenCurtain.Setup
             Controls.Add(_cancel);
 
             _install = new Button();
-            _install.Text = "安装";
+            _install.Text = SetupLang.T("安装", "Install");
             _install.SetBounds(470, 360, 88, 38);
             _install.FlatStyle = FlatStyle.Flat;
             _install.FlatAppearance.BorderSize = 0;
@@ -269,7 +272,7 @@ namespace ScreenCurtain.Setup
             _path.Enabled = false;
             _desktop.Enabled = false;
             _run.Enabled = false;
-            _status.Text = "正在安装…";
+            _status.Text = SetupLang.T("正在安装…", "Installing…");
             Application.DoEvents();
 
             try
@@ -280,8 +283,9 @@ namespace ScreenCurtain.Setup
                     Application.DoEvents();
                 });
                 _busy = false;
-                _status.Text = "安装完成";
-                MessageBox.Show(this, "幕帘已安装完成。\n\n安装位置：" + _options.InstallDir, "安装幕帘", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                _status.Text = SetupLang.T("安装完成", "Installation complete");
+                MessageBox.Show(this, SetupLang.T("幕帘已安装完成。\n\n安装位置：", "ScreenCurtain is installed.\n\nLocation: ") + _options.InstallDir,
+                    SetupLang.T("安装幕帘", "Install ScreenCurtain"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 Close();
             }
             catch (Exception ex)
@@ -293,8 +297,9 @@ namespace ScreenCurtain.Setup
                 _path.Enabled = true;
                 _desktop.Enabled = true;
                 _run.Enabled = true;
-                _status.Text = "安装失败";
-                MessageBox.Show(this, "安装失败：\n" + ex.Message + "\n\n日志：" + _options.LogPath, "幕帘", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                _status.Text = SetupLang.T("安装失败", "Installation failed");
+                MessageBox.Show(this, SetupLang.T("安装失败：\n", "Installation failed:\n") + ex.Message + SetupLang.T("\n\n日志：", "\n\nLog: ") + _options.LogPath,
+                    SetupLang.T("幕帘", "ScreenCurtain"), MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }
