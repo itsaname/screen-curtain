@@ -57,19 +57,6 @@ namespace ScreenCurtain
             }
         }
 
-        public static void OpenFolder()
-        {
-            try
-            {
-                System.IO.Directory.CreateDirectory(DirectoryPath);
-                System.Diagnostics.Process.Start("explorer.exe", "\"" + DirectoryPath + "\"");
-            }
-            catch (Exception ex)
-            {
-                Log.Exception("打开日志目录失败", ex);
-            }
-        }
-
         private static void Write(string level, string format, object[] args)
         {
             string message;

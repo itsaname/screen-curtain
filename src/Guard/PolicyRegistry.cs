@@ -14,13 +14,5 @@ namespace ScreenCurtain
         {
             return RegistryKey.OpenBaseKey(Hive, View);
         }
-
-        public static void UseCurrentUserTestScope()
-        {
-            Hive = RegistryHive.CurrentUser;
-            View = RegistryView.Default;
-            PolicyKeyPath = @"Software\ScreenCurtain\TestPolicy\AU";
-            BackupKeyPath = @"Software\ScreenCurtain\TestBackup";
-        }
     }
 }

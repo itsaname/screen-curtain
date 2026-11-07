@@ -60,14 +60,6 @@ namespace ScreenCurtain
             }
         }
 
-        public void RefreshIfDue()
-        {
-            lock (_sync)
-            {
-                RefreshIfDueLocked();
-            }
-        }
-
         public void RequestRefresh()
         {
             lock (_sync)

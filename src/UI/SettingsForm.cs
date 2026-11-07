@@ -448,7 +448,6 @@ namespace ScreenCurtain
             _settings.StartMinimized = false;
             _settings.TryPhysicalOff = true;
             _settings.LaptopPhysicalOff = false;
-            _settings.DdcOffExternal = true;
             _settings.DimExternalBacklight = true;
             _settings.RestoreForeground = true;
             _settings.CloseAction = CloseAction.Minimize;
@@ -456,7 +455,6 @@ namespace ScreenCurtain
             _settings.ShowTrayNotifications = true;
             _settings.MuteSystemAudio = true;
             _settings.Hotkey = Settings.DefaultHotkey;
-            _settings.LogLevel = "info";
             _settings.FirstRun = false;
             _settings.Save();
 

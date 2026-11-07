@@ -12,8 +12,6 @@ namespace ScreenCurtain
         public string MonitorId;
         public Native.RECT Bounds;
         public bool Primary;
-        public int PhysicalWidthMm;
-        public int PhysicalHeightMm;
         public double DiagonalInches;
         public DisplayConnectionKind ConnectionKind = DisplayConnectionKind.Unknown;
         public string ConnectionTechnology = string.Empty;
@@ -39,16 +37,6 @@ namespace ScreenCurtain
                 if (ConnectionKind == DisplayConnectionKind.Internal) return false;
                 return SystemPower.HasBattery &&
                        DiagonalInches > DisplayManager.LaptopInternalMaxInches;
-            }
-        }
-
-        public string DetectionLabel
-        {
-            get
-            {
-                if (ConnectionKind == DisplayConnectionKind.Internal) return "内置";
-                if (ConnectionKind == DisplayConnectionKind.External) return "外接";
-                return "未知";
             }
         }
     }
@@ -185,8 +173,6 @@ namespace ScreenCurtain
                         int heightMm = Native.GetDeviceCaps(dc, 6);  // VERTSIZE
                         if (widthMm > 0 && heightMm > 0)
                         {
-                            display.PhysicalWidthMm = widthMm;
-                            display.PhysicalHeightMm = heightMm;
                             display.DiagonalInches = Math.Sqrt((double)widthMm * widthMm + (double)heightMm * heightMm) / 25.4;
                         }
                     }

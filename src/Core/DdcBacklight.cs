@@ -12,7 +12,6 @@ namespace ScreenCurtain
         public string MonitorId;
         public string DeviceName;
         public uint Level;
-        public uint Maximum;
         public bool IsInternal;
     }
 
@@ -141,7 +140,6 @@ namespace ScreenCurtain
                             state.MonitorId = string.IsNullOrEmpty(d.MonitorId) ? d.DeviceName : d.MonitorId;
                             state.DeviceName = d.DeviceName;
                             state.Level = current;
-                            state.Maximum = maximum;
                             states.Add(state);
                             Log.Info("外接屏背光已设为 0：{0}（原亮度 {1}/{2}）",
                                 d.FriendlyName, current, maximum);
@@ -169,7 +167,6 @@ namespace ScreenCurtain
                     internalState.MonitorId = "WMI:INTERNAL";
                     internalState.DeviceName = "internal";
                     internalState.Level = internalLevel;
-                    internalState.Maximum = 100;
                     internalState.IsInternal = true;
                     states.Add(internalState);
                     SaveStates(states);

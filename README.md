@@ -151,7 +151,6 @@ ScreenCurtain.exe --test-policy         # 策略快照/回滚测试
 ScreenCurtain.exe --test-shutdown-guard # 最小化窗口关机否决测试
 ScreenCurtain.exe --test-audio          # 播放设备静音/恢复测试
 ScreenCurtain.exe --test-backlight      # 外接屏背光 100 → 0 → 100 测试
-ScreenCurtain.exe --test-ddc            # 只探测显示器连接类型和 DDC 能力
 ScreenCurtain.exe --request-exit        # 请运行中的实例正常退出
 ScreenCurtain.exe --repair-update       # 提权恢复遗留更新策略
 ```

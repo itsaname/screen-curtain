@@ -53,11 +53,6 @@ namespace ScreenCurtain
             get { return Path.Combine(DataDirectory, "ddc-restore"); }
         }
 
-        public static string TopologyStateFile
-        {
-            get { return Path.Combine(DataDirectory, "topology-restore"); }
-        }
-
         public static string BacklightStateFile
         {
             get { return Path.Combine(DataDirectory, "backlight-restore"); }

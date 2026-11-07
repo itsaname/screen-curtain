@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -112,7 +112,6 @@ namespace ScreenCurtain
         private readonly ToolStripMenuItem _repair;
         private readonly ToolStripMenuItem _settings;
         private readonly ToolStripMenuItem _exit;
-        private readonly AppNotifier _notifier;
         private readonly Icon _activeIcon;
         private readonly Icon _degradedIcon;
         private readonly Icon _offIcon;
@@ -127,7 +126,6 @@ namespace ScreenCurtain
 
         public TrayController(AppNotifier notifier)
         {
-            _notifier = notifier;
             _activeIcon = AppIcons.TrayActive;
             if (_activeIcon == null) _activeIcon = TrayIconFactory.Create(AppTheme.Success);
             _degradedIcon = AppIcons.TrayDegraded;
@@ -233,11 +231,6 @@ namespace ScreenCurtain
             _settings.Enabled = state == BlackoutState.Idle;
             _open.Enabled = state == BlackoutState.Idle;
             _repair.Enabled = state == BlackoutState.Idle && _guardState == GuardState.Degraded;
-        }
-
-        public void SetDarkForNotifications(bool dark)
-        {
-            _notifier.SetDark(dark);
         }
 
         public void ShowWindow()

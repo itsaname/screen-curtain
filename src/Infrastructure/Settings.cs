@@ -112,7 +112,6 @@ namespace ScreenCurtain
         public string Language = "auto";
         public bool TryPhysicalOff = true;
         public bool LaptopPhysicalOff = false;
-        public bool DdcOffExternal = true;
         public bool DimExternalBacklight = true;
         public bool RestoreForeground = true;
         public CloseAction CloseAction = CloseAction.Minimize;
@@ -120,7 +119,6 @@ namespace ScreenCurtain
         public bool ShowTrayNotifications = true;
         public bool MuteSystemAudio = true;
         public string Hotkey = DefaultHotkey;
-        public string LogLevel = "info";
 
         private static string DirectoryPath
         {
@@ -170,7 +168,6 @@ namespace ScreenCurtain
                 if (language == "zh" || language == "en" || language == "auto") s.Language = language;
                 s.TryPhysicalOff = ReadBool(values, "TryPhysicalOff", s.TryPhysicalOff);
                 s.LaptopPhysicalOff = ReadBool(values, "LaptopPhysicalOff", s.LaptopPhysicalOff);
-                s.DdcOffExternal = ReadBool(values, "DdcOffExternal", s.DdcOffExternal);
                 s.DimExternalBacklight = ReadBool(values, "DimExternalBacklight", s.DimExternalBacklight);
                 s.RestoreForeground = ReadBool(values, "RestoreForeground", s.RestoreForeground);
                 s.ConfirmExit = ReadBool(values, "ConfirmExit", s.ConfirmExit);
@@ -178,7 +175,6 @@ namespace ScreenCurtain
                 s.MuteSystemAudio = ReadBool(values, "MuteSystemAudio", s.MuteSystemAudio);
                 s.CloseAction = ReadCloseAction(values, "CloseAction", s.CloseAction);
                 s.Hotkey = ReadString(values, "Hotkey", s.Hotkey);
-                s.LogLevel = ReadString(values, "LogLevel", s.LogLevel);
 
                 HotkeySpec spec = HotkeySpec.Parse(s.Hotkey);
                 if (spec == null || spec.VirtualKey == 0)
@@ -212,15 +208,13 @@ namespace ScreenCurtain
                     "Language=" + Language,
                     "TryPhysicalOff=" + (TryPhysicalOff ? "true" : "false"),
                     "LaptopPhysicalOff=" + (LaptopPhysicalOff ? "true" : "false"),
-                    "DdcOffExternal=" + (DdcOffExternal ? "true" : "false"),
                     "DimExternalBacklight=" + (DimExternalBacklight ? "true" : "false"),
                     "RestoreForeground=" + (RestoreForeground ? "true" : "false"),
                     "CloseAction=" + (CloseAction == CloseAction.Exit ? "Exit" : "Minimize"),
                     "ConfirmExit=" + (ConfirmExit ? "true" : "false"),
                     "ShowTrayNotifications=" + (ShowTrayNotifications ? "true" : "false"),
                     "MuteSystemAudio=" + (MuteSystemAudio ? "true" : "false"),
-                    "Hotkey=" + Hotkey,
-                    "LogLevel=" + LogLevel
+                    "Hotkey=" + Hotkey
                 };
                 File.WriteAllLines(tmp, lines, new UTF8Encoding(false));
                 if (File.Exists(FilePath))

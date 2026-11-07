@@ -290,65 +290,6 @@ namespace ScreenCurtain
         }
     }
 
-    internal sealed class InlineBanner : Panel
-    {
-        private readonly Label _title;
-        private readonly Label _body;
-        private readonly Button _action;
-        public event EventHandler ActionClicked;
-
-        public InlineBanner()
-        {
-            BackColor = AppTheme.WarningSoft;
-            Padding = new Padding(14, 10, 14, 10);
-            _title = new Label();
-            _title.AutoSize = false;
-            _title.Height = 20;
-            _title.Font = new Font(AppTheme.BodyFont, FontStyle.Bold);
-            _title.ForeColor = AppTheme.Warning;
-            _title.BackColor = Color.Transparent;
-            _body = new Label();
-            _body.AutoSize = false;
-            _body.Font = AppTheme.SmallFont;
-            _body.ForeColor = AppTheme.TextSecondary;
-            _body.BackColor = Color.Transparent;
-            _action = new Button();
-            AppTheme.StyleLink(_action);
-            _action.Text = "处理";
-            _action.Visible = false;
-            _action.Click += delegate { EventHandler h = ActionClicked; if (h != null) h(this, EventArgs.Empty); };
-            Controls.Add(_title); Controls.Add(_body); Controls.Add(_action);
-        }
-
-        public void Configure(string title, string body, string action, Color back, Color fore)
-        {
-            Text = title;
-            _title.Text = title;
-            _body.Text = body;
-            BackColor = back;
-            _title.ForeColor = fore;
-            _action.Text = action;
-            _action.Visible = !string.IsNullOrEmpty(action);
-            DoLayout();
-        }
-
-        protected override void OnResize(EventArgs eventargs)
-        {
-            base.OnResize(eventargs);
-            DoLayout();
-        }
-
-        private void DoLayout()
-        {
-            if (_title == null) return;
-            int y = Padding.Top;
-            _title.SetBounds(Padding.Left, y, Width - Padding.Horizontal, 20);
-            _body.SetBounds(Padding.Left, y + 22, Width - Padding.Horizontal, Math.Max(20, Height - y - 30));
-            _action.SetBounds(Width - Padding.Right - 58, y - 2, 58, 24);
-            PerformLayout();
-        }
-    }
-
     internal sealed class HotkeyCaptureBox : TextBox
     {
         private HotkeySpec _spec;
@@ -452,20 +393,6 @@ namespace ScreenCurtain
 
     internal static class UiLayout
     {
-        public static Label SectionLabel(string text)
-        {
-            Label label = AppTheme.CreateLabel(text, AppTheme.SectionFont, AppTheme.TextPrimary);
-            label.Height = 24;
-            return label;
-        }
-
-        public static Label BodyLabel(string text)
-        {
-            Label label = AppTheme.CreateLabel(text, AppTheme.BodyFont, AppTheme.TextSecondary);
-            label.Height = 22;
-            return label;
-        }
-
         public static Button PrimaryButton(string text)
         {
             Button button = new Button();

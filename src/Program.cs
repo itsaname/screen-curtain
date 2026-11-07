@@ -48,24 +48,6 @@ namespace ScreenCurtain
                 return;
             }
 
-            if (HasArgument(args, "--test-ddc"))
-            {
-                DdcTest.Run(false);
-                return;
-            }
-
-            if (HasArgument(args, "--test-ddc-toggle"))
-            {
-                DdcTest.Run(true);
-                return;
-            }
-
-            if (HasArgument(args, "--test-topology"))
-            {
-                TopologyTest.Run();
-                return;
-            }
-
             if (HasArgument(args, "--test-backlight"))
             {
                 BacklightTest.Run();
@@ -113,12 +95,7 @@ namespace ScreenCurtain
             };
 
             bool createdNew = false;
-            string mutexName = MutexName;
-            if (string.Equals(Environment.GetEnvironmentVariable("SCREENCURTAIN_TEST_NO_MUTEX"), "1", StringComparison.Ordinal))
-            {
-                mutexName = MutexName + ".test." + Guid.NewGuid().ToString("N");
-            }
-            using (Mutex mutex = new Mutex(true, mutexName, out createdNew))
+            using (Mutex mutex = new Mutex(true, MutexName, out createdNew))
             {
                 if (!createdNew)
                 {
@@ -129,7 +106,7 @@ namespace ScreenCurtain
                 try
                 {
                     AudioMuteService.RecoverStaleState();
-                    DdcMonitorPower.RecoverStaleState();
+                    DdcLegacyRecovery.RecoverStaleState();
                     DdcBacklight.RecoverStaleState();
                     Application.Run(new AppHost());
                 }
@@ -249,39 +226,6 @@ namespace ScreenCurtain
         }
     }
 
-    internal static class DdcTest
-    {
-        public static void Run(bool toggle)
-        {
-            StringBuilder sb = new StringBuilder();
-            try
-            {
-                sb.AppendLine("ScreenCurtain DDC monitor test");
-                sb.AppendLine("Battery: " + SystemPower.HasBattery);
-                string[] lines = DdcMonitorPower.Probe();
-                for (int i = 0; i < lines.Length; i++) sb.AppendLine(lines[i]);
-                if (toggle)
-                {
-                    List<string> off = DdcMonitorPower.TurnOffExternal();
-                    sb.AppendLine("Turned off external monitors: " + off.Count);
-                    System.Threading.Thread.Sleep(1500);
-                    DdcMonitorPower.TurnOnExternal(off);
-                    sb.AppendLine("Turn-on requested");
-                }
-                sb.AppendLine("Result: PASS");
-            }
-            catch (Exception ex)
-            {
-                sb.AppendLine("Result: FAIL");
-                sb.AppendLine(ex.ToString());
-                Log.Exception("DDC 测试失败", ex);
-            }
-
-            string path = Path.Combine(Path.GetTempPath(), "ScreenCurtain-ddc-test.txt");
-            try { File.WriteAllText(path, sb.ToString(), new UTF8Encoding(false)); } catch { }
-        }
-    }
-
     internal static class BacklightTest
     {
         public static void Run()
@@ -311,51 +255,6 @@ namespace ScreenCurtain
             }
 
             string path = Path.Combine(Path.GetTempPath(), "ScreenCurtain-backlight-test.txt");
-            try { File.WriteAllText(path, sb.ToString(), new UTF8Encoding(false)); } catch { }
-        }
-    }
-
-    internal static class TopologyTest
-    {        public static void Run()
-        {
-            StringBuilder sb = new StringBuilder();
-            try
-            {
-                sb.AppendLine("ScreenCurtain topology test");
-                sb.AppendLine("Battery: " + SystemPower.HasBattery);
-                List<DisplayInfo> before = DisplayManager.Enumerate();
-                for (int i = 0; i < before.Count; i++)
-                {
-                    sb.AppendLine(string.Format("before {0} {1:0.0}in {2}",
-                        before[i].DeviceName, before[i].DiagonalInches, before[i].DetectionLabel));
-                }
-                bool disabled = DisplayTopology.DisableExternalOutputs();
-                sb.AppendLine("Disable external outputs: " + disabled);
-                System.Threading.Thread.Sleep(1500);
-                List<DisplayInfo> during = DisplayManager.Enumerate();
-                for (int i = 0; i < during.Count; i++)
-                {
-                    sb.AppendLine(string.Format("during {0} {1:0.0}in {2}",
-                        during[i].DeviceName, during[i].DiagonalInches, during[i].DetectionLabel));
-                }
-                DisplayTopology.RestoreExternalOutputs();
-                System.Threading.Thread.Sleep(1500);
-                List<DisplayInfo> after = DisplayManager.Enumerate();
-                for (int i = 0; i < after.Count; i++)
-                {
-                    sb.AppendLine(string.Format("after {0} {1:0.0}in {2}",
-                        after[i].DeviceName, after[i].DiagonalInches, after[i].DetectionLabel));
-                }
-                sb.AppendLine("Result: PASS");
-            }
-            catch (Exception ex)
-            {
-                sb.AppendLine("Result: FAIL");
-                sb.AppendLine(ex.ToString());
-                Log.Exception("拓扑测试失败", ex);
-            }
-
-            string path = Path.Combine(Path.GetTempPath(), "ScreenCurtain-topology-test.txt");
             try { File.WriteAllText(path, sb.ToString(), new UTF8Encoding(false)); } catch { }
         }
     }
