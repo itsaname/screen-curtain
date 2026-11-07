@@ -1,78 +1,72 @@
 # 幕帘 ScreenCurtain
 
-**English:** ScreenCurtain is a Windows 11 blackout and update-restart guard. It covers every display with a borderless black layer, turns off only the panel backlight where supported (external DDC/CI, internal WMI), keeps monitors and their USB hubs powered, and restores on mouse/keyboard input. The UI supports Chinese and English; choose **Settings > General > Language** and restart. See the release table below for downloads.
+ScreenCurtain 是一个面向 Windows 11 的熄屏工具。它会把所有显示器盖上一层无边框纯黑画面，并在支持的情况下只关闭屏幕背光，让显示器、USB Hub 和接在 Hub 上的键鼠继续工作。鼠标移动不会退出，点击鼠标或按键即可恢复。
 
-Windows 11 全屏熄屏与 Windows Update 重启防护工具。它按需让所有显示器进入纯黑无边框全屏，尝试关闭显示器物理背光；只有鼠标点击或键盘按键才恢复。运行期间可临时暂停 Windows 自动更新，并阻止更新触发的重启。
+当前版本：**1.2.0**。应用界面、安装器和卸载器都支持中文/English。
 
-当前版本：**1.2.0**。
+**English:** ScreenCurtain is a Windows 11 blackout tool. It covers every display with a borderless black layer and turns off only the panel backlight where supported, keeping monitors and their USB hubs powered. Move the mouse freely; a click or keypress restores the desktop. The app, installer and uninstaller are bilingual.
 
-> 1.2.0 修复/优化：
-> - 安装器/卸载器增加英文界面：按系统语言自动选择，也可用 `/LANG=EN` 强制英文；英文系统下不会显示中文界面。
-> - 增加英文界面：默认跟随系统语言，可在“设置 > 常规 > 界面语言 / Language”选择自动、中文或 English，重启后生效；主窗口、设置、首次向导、托盘菜单和对话框均已英文化。
-> - “预览 3 秒”现在复用实际熄屏的背光/WMI 调光、静音、无边框黑层、DWM 无圆角和隐藏光标设置；3 秒后按相同顺序恢复。
-> - 更新保护握手：辅助进程先发 `HELLO`，客户端回 `OK`，再应用策略并返回 `ACTIVE`；修复 UAC 同意后卡在“正在请求管理员权限”。
-> - 笔记本（检测到电池）默认不发送物理关屏，只使用全屏黑层，避免鼠标移动导致内置屏背光反复亮灭，以及物理关屏触发的唤醒锁屏。
-> - 使用 DisplayConfig `outputTechnology` 优先判定内置/外接（Internal / LVDS / DP Embedded 等视为内置）；已识别的内置屏只做黑层，已识别的外接屏尝试 DDC/CI 关屏；尺寸仅作为无法读取连接类型时的 fallback，不使用主屏标志。
-> - 笔记本屏幕只关闭背光（默认开启）：外接屏通过 DDC/CI VCP 0x10 将亮度设为 0；内置屏通过 WMI WmiSetBrightness 尝试设为 0。显示器保持供电，USB Hub 和键鼠继续工作；唤醒时恢复原亮度。不使用 0xD6 电源命令。
-> - 音频恢复改到显示器恢复/黑层关闭之后，并保留恢复状态、校验结果、延迟重试；锁屏后解锁也会重试。
-> - 音频设备刷新移到后台线程，避免 Core Audio 调用阻塞低级输入钩子。
+## 下载
 
-## 下载与安装
+| 版本 | 说明 |
+| --- | --- |
+| [安装版](https://github.com/itsaname/screen-curtain/releases/download/v1.2.0/ScreenCurtain-Setup-1.2.0.exe) | 按用户安装，不需要管理员权限 |
+| [绿色版](https://github.com/itsaname/screen-curtain/releases/download/v1.2.0/ScreenCurtain-1.2.0-portable.zip) | 解压即用，配置和日志保存在同目录 `data\` |
+| [SHA256SUMS](https://github.com/itsaname/screen-curtain/releases/download/v1.2.0/SHA256SUMS.txt) | 下载后校验文件完整性 |
 
-- **安装版（按用户安装，不需要管理员权限）**  
-  `dist\1.2.0\installer\ScreenCurtain-Setup-1.2.0.exe`
-- **绿色版（解压即用）**  
-  `dist\1.2.0\portable\ScreenCurtain-1.2.0-portable.zip`
+也可以直接从 [GitHub Releases](https://github.com/itsaname/screen-curtain/releases/latest) 获取最新版本。
 
-安装版默认安装到 `%LOCALAPPDATA%\Programs\ScreenCurtain`，创建开始菜单/可选桌面快捷方式和“应用与功能”卸载项。安装器本身不写 HKLM；更新保护只在运行时请求 UAC。
+安装版默认装到 `%LOCALAPPDATA%\Programs\ScreenCurtain`，会创建开始菜单入口、可选桌面快捷方式和“应用与功能”卸载项。安装器本身不写 HKLM；更新保护只在运行时请求 UAC。
 
-绿色版解压后直接运行 `ScreenCurtain.exe`；配置、日志和音频恢复标记保存在同目录 `data\`，不创建快捷方式或卸载项。若目录不可写，会自动回退到 `%LOCALAPPDATA%\ScreenCurtain` 并显示说明。
+绿色版不写注册表，也不会创建快捷方式。若解压目录不可写，程序会自动回退到 `%LOCALAPPDATA%\ScreenCurtain` 并给出提示。
 
-> 产物没有代码签名证书，Windows SmartScreen 可能提示未知发布者。请使用 `dist\1.2.0\SHA256SUMS.txt` 校验下载/拷贝的文件。
+> 目前没有代码签名证书，Windows SmartScreen 可能提示“未知发布者”。请用 SHA256SUMS 校验下载文件。
 
-## 主要功能
+## 它怎么工作
 
-- **全屏熄屏**：每台显示器一个无边框全屏 topmost 层，覆盖任务栏与通知区域；支持多显示器、竖屏和热插拔。
-- **不会误唤醒**：鼠标移动保持黑屏；鼠标按键或键盘按键恢复。首个唤醒输入会被吞掉。
-- **托盘仍保留**：不会隐藏 `NotifyIcon`，黑屏时它由全屏层自然遮挡；恢复后不会出现重新出现的闪烁。
-- **应用提醒静默**：黑屏期间本程序的托盘气泡、消息框、错误提示全部不显示，恢复后合并提示。
-- **Topmost Guard**：通过 WinEvent 钩子和短周期重新置顶，尝试压住第三方窗口、普通 topmost 弹窗和通知；安全桌面/UAC 除外。
-- **系统静音**：黑屏时静音所有活动播放设备；恢复时还原每台设备原来的静音状态。新插入/切换的播放设备也会被静音。默认开启，可在设置和主窗口快速选项中关闭。
-- **笔记本物理关屏可选**：检测到电池时默认只做全屏黑层，不发送 `SC_MONITORPOWER`；可在“设置 > 熄屏”单独开启“在笔记本上尝试物理关屏”（默认关闭，可能有背光反复/唤醒锁屏副作用）。
-- **屏幕仅关背光**：优先用 DisplayConfig 连接类型识别内置/外接；外接屏在黑层建立前将 DDC/CI VCP 0x10 亮度设为 0；内置屏尝试通过 WMI WmiSetBrightness 设为 0，仅关闭背光。显示器保持供电，USB Hub 和键鼠继续工作；唤醒时恢复原亮度。WMI 不可用时内置屏保留黑层。默认开启，可单独关闭。
-- **更新重启保护**：运行时以管理员权限临时写入 Windows Update 策略并阻止关机/重启；退出时恢复原设置。保护降级/恢复失败有明确重试入口。
-- **完整 UI**：首次运行 3 步向导、主窗口、独立设置窗口（常规/熄屏/更新保护/诊断与关于）、退出确认、恢复失败对话框、无障碍键盘操作。
-- **中英文界面**：自动跟随系统语言，也可手动选择中文或 English（重启后生效）。
-- **品牌图标**：16–256px 多尺寸主图标与开启/降级/关闭三态托盘图标。
+- **全屏黑层**：每台显示器各有一个无边框、置顶的全屏窗口，覆盖任务栏和通知区域，支持多显示器、竖屏和热插拔。
+- **只关背光**：外接屏通过 DDC/CI `VCP 0x10` 把亮度设为 0；内置屏尝试通过 WMI `WmiSetBrightness(0)` 调暗。显示器保持供电，所以外接屏的 USB Hub 和键鼠不会掉线。
+- **不关闭显示器电源**：黑色熄屏流程不会发送 `VCP 0xD6` 电源命令。这样即使显示器对 DDC 电源控制支持不好，也不会出现“关了以后醒不过来”的情况。
+- **点击或按键恢复**：鼠标移动不会退出；鼠标按键、滚轮（可关闭）或键盘按键会恢复桌面、亮度和音频。首个唤醒输入会被吞掉，避免误触到桌面。
+- **系统静音**：熄屏时静音当前所有活动播放设备，恢复时还原每台设备原来的静音状态。黑屏期间新接入的播放设备也会被静音。
+- **更新重启保护**：运行时以管理员权限临时暂停 Windows Update 自动更新并阻止更新重启，退出或关闭保护时恢复原策略。
+- **预览 3 秒**：预览会复用实际熄屏的背光调节、静音、黑层、隐藏光标和去圆角效果，3 秒后按相同顺序恢复。
+- **托盘与通知**：黑屏时托盘图标不会被隐藏，只是被黑层自然盖住；本程序的托盘提示和错误消息会在恢复后合并显示。
+- **中英文界面**：默认跟随系统语言，也可以在设置中手动切换，重启后生效。
 
 ## 系统要求
 
-- Windows 11（23H2 / 24H2 / 25H2；x64）。
+- Windows 11 23H2 / 24H2 / 25H2，x64。
 - .NET Framework 4.8（Windows 11 自带）。
-- 更新重启保护需要管理员权限（UAC）；熄屏、静音和绿色版运行不需要管理员权限。
+- 熄屏、静音和绿色版运行不需要管理员权限；更新重启保护需要 UAC。
 
 ## 使用
 
-### 首次运行
+### 第一次运行
 
-首次运行会打开 3 步向导：
+首次启动会打开 3 步向导：
 
 1. 了解“黑屏不是锁屏”和默认静音行为。
-2. 选择启用更新保护（会请求 UAC）或仅使用熄屏。
+2. 选择启用更新重启保护（需要 UAC），或只使用熄屏功能。
 3. 设置全局快捷键，选择是否启动后最小化，完成向导。
 
-首次设置关闭向导不会保存 `FirstRun=false`，下次仍会进入向导。
+如果直接关闭首次向导，向导不会保存“已完成”状态，下次启动仍会出现。
 
 ### 熄屏与恢复
 
-- 点击主窗口“立即熄屏”、按全局热键（默认 `Ctrl+Alt+Shift+L`）或使用托盘菜单。
-- 所有显示器被纯黑覆盖；桌面默认尝试物理熄屏，笔记本默认只使用全屏黑层；音频默认静音。
-- 鼠标移动不会恢复；点击鼠标或按键后恢复显示并还原音频。
-- 系统锁屏、远程断开、系统挂起、程序退出时会自动恢复显示，避免把用户困在黑屏后面。
+你可以点击主窗口的“立即熄屏”，按默认快捷键 `Ctrl+Alt+Shift+L`，或从托盘菜单进入熄屏。
+
+熄屏期间：
+
+- 所有显示器被纯黑覆盖；
+- 台式机默认尝试物理关屏，笔记本默认只覆盖黑层并关闭背光；
+- 系统音频默认静音；
+- 鼠标移动不会恢复，点击鼠标或按键后恢复；
+- 系统锁屏、远程断开、系统挂起或程序退出时，会自动恢复显示，避免把人困在黑屏后面。
 
 ### 更新重启保护
 
-启用后，程序会以管理员权限启动辅助进程，在运行期间临时写入：
+启用保护后，程序会启动一个管理员权限的辅助进程，在运行期间临时写入：
 
 ```text
 HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU
@@ -81,35 +75,38 @@ HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU
   AlwaysAutoRebootAtScheduledTime = 0
 ```
 
-并保存原值；退出或关闭保护时恢复。辅助进程在父进程崩溃时会恢复；如果两者都被强制结束，下一次启动会检测孤儿备份并先恢复。
+原值会先保存，退出或关闭保护时恢复。如果主进程异常退出，辅助进程会尝试恢复；如果两个进程都被强制结束，下一次启动会检查遗留备份并先恢复策略。
 
-Windows 设置可能临时显示“部分设置由组织管理”，这是临时策略造成的，退出后恢复。
+Windows 设置里可能临时出现“部分设置由组织管理”，这是临时策略造成的，退出保护后会消失。
 
-## 设置与配置
+## 设置
 
-安装版配置：
+安装版的配置位于：
 
 ```text
 %LOCALAPPDATA%\ScreenCurtain\settings.ini
 %LOCALAPPDATA%\ScreenCurtain\logs\
 ```
 
-绿色版配置：
+绿色版位于：
 
 ```text
 <解压目录>\data\settings.ini
 <解压目录>\data\logs\
 ```
 
-主要设置自动保存，包括：
+可以在设置里调整：
 
-- 启动后最小化、关闭窗口行为、退出确认、托盘通知。
-- 热键、物理关屏、笔记本物理关屏（默认关闭）、外接屏仅关背光（默认开启）、保持系统唤醒、滚轮恢复、恢复前台窗口。
-- **熄屏时静音系统音频**（默认开启）。
-- 更新保护开关、启动时自动尝试。
-- 诊断、复制、日志目录和重置设置。
-
-首版不提供开机自启和深色主题；中文/English 界面已支持。
+- 启动后最小化、关闭窗口行为、退出确认、托盘通知；
+- 全局快捷键；
+- 是否尝试物理关屏；
+- 笔记本上的物理关屏（默认关闭）；
+- 外接屏/内置屏仅关背光（默认开启）；
+- 保持系统唤醒、滚轮恢复、恢复前台窗口；
+- 熄屏时静音系统音频；
+- 更新保护开关和启动时自动尝试；
+- 界面语言：自动 / 中文 / English；
+- 诊断信息、日志目录和重置设置。
 
 ## 安装器静默参数
 
@@ -121,13 +118,15 @@ Windows 设置可能临时显示“部分设置由组织管理”，这是临时
 /NOARP             不写“应用与功能”卸载项（测试用）
 /NOSHORTCUTS       不创建任何快捷方式（测试用）
 /LOG=<path>        安装日志路径
+/LANG=EN           强制英文界面
+/LANG=ZH           强制中文界面
 ```
 
-卸载器支持 `/SILENT`，默认保留设置和日志，可在交互界面勾选一并删除。卸载前会尝试关闭正在运行的幕帘并恢复遗留的 Windows Update 策略。
+卸载器支持 `/SILENT`，默认保留设置和日志，也可以在交互界面里勾选一并删除。卸载前会尝试关闭正在运行的幕帘，并恢复遗留的 Windows Update 策略。
 
 ## 从源码构建
 
-无需 .NET SDK；使用 Windows 自带的 .NET Framework C# 编译器。
+不需要 .NET SDK，使用 Windows 自带的 .NET Framework C# 编译器即可。
 
 ```powershell
 cd screen-curtain
@@ -140,48 +139,53 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\build-release.ps1
 ```
 
-图标由 `tools\generate_icons.py` 生成（Pillow）；生成结果已提交，普通构建不依赖 Python。
+图标由 `tools\generate_icons.py` 生成（Pillow）；生成结果已提交，常规构建不依赖 Python。
 
-## 开发/验证命令
+## 开发和验证命令
 
 ```text
-ScreenCurtain.exe --self-test          # 环境/显示器/透明光标自检
-ScreenCurtain.exe --dry-run            # 显示 5 秒测试覆盖层，不关物理屏
-ScreenCurtain.exe --test-blackout      # 黑屏/输入钩子集成测试
-ScreenCurtain.exe --test-policy        # 内存存储的策略快照/回滚测试
+ScreenCurtain.exe --self-test           # 环境、显示器、透明光标自检
+ScreenCurtain.exe --dry-run             # 显示 5 秒测试覆盖层，不关物理屏
+ScreenCurtain.exe --test-blackout       # 黑屏/输入钩子集成测试
+ScreenCurtain.exe --test-policy         # 策略快照/回滚测试
 ScreenCurtain.exe --test-shutdown-guard # 最小化窗口关机否决测试
-ScreenCurtain.exe --test-audio         # 播放设备静音/恢复测试（会短暂静音）
-ScreenCurtain.exe --request-exit       # 请运行中实例正常退出（安装器/卸载器使用）
-ScreenCurtain.exe --repair-update      # 提权恢复遗留更新策略（卸载器使用）
+ScreenCurtain.exe --test-audio          # 播放设备静音/恢复测试
+ScreenCurtain.exe --test-backlight      # 外接屏背光 100 → 0 → 100 测试
+ScreenCurtain.exe --test-ddc            # 只探测显示器连接类型和 DDC 能力
+ScreenCurtain.exe --request-exit        # 请运行中的实例正常退出
+ScreenCurtain.exe --repair-update       # 提权恢复遗留更新策略
 ```
 
-`--test-guard-protocol` 在当前沙箱中因命名管道限制无法运行；完整安装/UAC/HKLM 验收需在普通 Windows 桌面执行。
+`--test-guard-protocol` 依赖命名管道，在受限沙箱里无法运行；完整安装、UAC 和 HKLM 验收需要在普通 Windows 桌面完成。
 
 ## 已知边界
 
-1. **全黑是主保证，物理关屏是尽力而为。** 不同显卡/显示器对 `SC_MONITORPOWER` 支持不一致，失败时仍保持全黑。
-2. **鼠标移动可能从硬件层点亮显示器背光。** 笔记本默认跳过物理关屏以避免反复亮灭；若手动开启笔记本物理关屏，该现象可能仍存在。
-   DDC/CI 背光控制只对支持 VCP 0x10 的外接屏有效；部分显示器/扩展坞会忽略 DDC 命令。内置屏 WMI 亮度在部分驱动、OLED/HDR 或受限账户下不可用；此时该屏保持全屏黑层。若亮度 0 仍不能完全熄灭背光，这是固件/背光最低亮度的限制。
-3. **安全桌面（UAC、Ctrl+Alt+Del、锁屏）和系统强制界面无法由普通窗口覆盖。** 这是系统边界；Topmost Guard 不会尝试绕过。
-   如果系统启用了“唤醒时要求登录”或强制空闲锁定策略，物理关屏后可能停留在锁屏；这是 Windows 安全策略，程序不会尝试绕过。
-4. 第三方 popup/通知使用 Topmost Guard 尝试压住；若 Windows 系统 Toast 或独占全屏程序仍显示在其上，物理 DPMS 成功时可一并隐藏，失败时记录为系统限制。
-5. **用户态程序不能对强制重启作 100% 保证。** 组策略/Intune 覆盖、用户在系统界面选择“仍要重启”、断电、蓝屏、内核故障均无法拦截；本工具针对正常 Windows Update 自动重启路径。
-6. **关机否决依赖可见顶层窗口。** 保护期间主窗口只最小化、不隐藏到托盘。真实 Windows 11 关机测试需在普通桌面完成。
-7. **静音恢复。** 恢复显示/退出后会校验并延迟重试音频恢复；锁屏时会在解锁后重试。如果进程被强杀或断电，可能暂时保持静音，下一次启动会读取恢复标记并还原。
-8. **黑屏不是锁屏。** 熄屏期间当前会话是解锁的；请不要在公共场所无人值守运行。
-9. **当前构建环境限制。** DSH 沙箱禁止 HKCU/HKLM 写入和命名管道，无法完成真实 UAC、完整安装快捷方式/ARP、系统关机和物理 DPMS 验收。安装器载荷和卸载器已用 `/NOARP /NOSHORTCUTS` 模式做文件级测试。
+1. **全黑是主保证，物理关屏是尽力而为。** 不同显卡和显示器对 `SC_MONITORPOWER` 的支持不一致；失败时黑层仍然有效。
+2. **背光控制取决于显示器/驱动。** 外接屏需要支持 DDC/CI `VCP 0x10`；内置屏需要 WMI 亮度接口。部分显示器、扩展坞、OLED/HDR 模式或受限账户下可能不可用，这时会保留全屏黑层。
+3. **亮度 0 不一定等于完全灭灯。** 有些显示器的最低背光仍然可见，这是固件限制，不是黑层失效。
+4. **安全桌面无法覆盖。** UAC、Ctrl+Alt+Del、锁屏和系统强制界面属于 Windows 的安全边界，普通窗口无法盖住。
+5. **唤醒后可能仍需登录。** 如果系统启用了“唤醒时要求登录”或强制空闲锁定，这是 Windows 的安全策略，程序不会绕过。
+6. **更新保护不是 100% 保证。** 组策略/Intune、用户在系统界面选择“仍要重启”、断电、蓝屏等情况无法拦截；本工具针对正常的 Windows Update 自动重启路径。
+7. **关机否决依赖可见顶层窗口。** 保护期间主窗口只最小化，不隐藏到托盘。
+8. **静音恢复可能延迟。** 恢复显示或退出后会校验并重试音频状态；如果进程被强制结束，下一次启动会读取恢复标记并还原。
+9. **黑屏不是锁屏。** 熄屏期间当前会话仍然解锁，请不要在公共场所无人值守运行。
+10. **当前测试环境有限。** DSH 沙箱禁止 HKCU/HKLM 写入和命名管道，因此真实 UAC、完整快捷方式/ARP、系统关机和物理 DPMS 验收仍需在普通桌面完成。
 
 ## 文档
 
 - [设计约束与实现方案](docs/design.md)
 - [完整 UI/UX 设计规范](docs/ui-design.md)
-- [发布说明](dist/1.2.0/RELEASE-NOTES.md)
+- [1.2.0 发布说明](dist/1.2.0/RELEASE-NOTES.md)
 
 ## 隐私
 
 - 不联网、无遥测、无崩溃上传。
 - 不记录键值、不截屏、不上传输入内容。
-- 日志仅记录状态变化、API 返回码和“鼠标/键盘恢复”类别。
+- 日志只记录状态变化、API 返回码和“鼠标/键盘恢复”类别。
 - 输入钩子只在熄屏流程中临时安装，恢复后立即卸载。
-- 音频静音只操作系统播放设备，不访问麦克风/采集设备，不记录音频内容。
-- 更新策略备份保存在 HKLM，退出/卸载时恢复。
+- 音频静音只操作系统播放设备，不访问麦克风或采集设备。
+- 更新策略备份保存在 HKLM，退出或卸载时恢复。
+
+---
+
+本软件由 **deepseek-v4.1-flash1017** 开发。
