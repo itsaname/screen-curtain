@@ -1,0 +1,27 @@
+name: Release v1.2.0
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.2.0
+          name: ScreenCurtain 1.2.0
+          body_path: dist/1.2.0/RELEASE-NOTES.md
+          files: |
+            dist/1.2.0/installer/ScreenCurtain-Setup-1.2.0.exe
+            dist/1.2.0/portable/ScreenCurtain-1.2.0-portable.zip
+            dist/1.2.0/SHA256SUMS.txt
+          fail_on_unmatched_files: true
