@@ -77,7 +77,6 @@ New-Item -ItemType Directory -Force -Path $portableStage | Out-Null
 Copy-Item -LiteralPath (Join-Path $buildDir 'ScreenCurtain.exe') -Destination $portableStage
 Copy-Item -LiteralPath (Join-Path $buildDir 'ScreenCurtain.exe.config') -Destination $portableStage
 Copy-Item -LiteralPath (Join-Path $root 'README.md') -Destination $portableStage
-Copy-Item -LiteralPath (Join-Path $root 'docs') -Destination $portableStage -Recurse
 Set-Content -LiteralPath (Join-Path $portableStage 'portable.mode') -Value 'ScreenCurtain portable mode' -Encoding ASCII
 New-Item -ItemType Directory -Force -Path (Join-Path $portableStage 'data') | Out-Null
 
