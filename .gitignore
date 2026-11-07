@@ -1,0 +1,8 @@
+build/
+artifacts/
+.vs/
+*.user
+*.suo
+dist/*
+!dist/1.1.9/
+!dist/1.1.9/**
