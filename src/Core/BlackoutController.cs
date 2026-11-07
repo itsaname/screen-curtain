@@ -958,7 +958,13 @@ namespace ScreenCurtain
                     long ticks = Interlocked.Read(ref _heartbeatTicks);
                     if (ticks > 0 && (DateTime.UtcNow.Ticks - ticks) > TimeSpan.TicksPerSecond * 10)
                     {
-                        Log.Error("UI 心跳超过 10 秒未更新（状态 {0}），将终止进程以解除黑屏", state);
+                        string detail = string.Format(
+                            "UI heartbeat stalled.\r\nState: {0}\r\nHeartbeat age: {1:0.0}s\r\nLast log: {2}\r\n",
+                            state,
+                            TimeSpan.FromTicks(DateTime.UtcNow.Ticks - ticks).TotalSeconds,
+                            Log.LastMessage);
+                        string crashPath = CrashLog.Write("watchdog-ui-heartbeat", detail);
+                        Log.Error("UI 心跳超过 10 秒未更新（状态 {0}），将终止进程以解除黑屏；崩溃报告：{1}", state, crashPath);
                         AudioMuteService.EmergencyRestoreFromDisk();
                         Native.TerminateProcess(Native.GetCurrentProcess(), 1);
                         return;

@@ -87,10 +87,12 @@ namespace ScreenCurtain
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
             Application.ThreadException += delegate(object sender, ThreadExceptionEventArgs e)
             {
+                CrashLog.WriteException("ui-thread-exception", e.Exception);
                 Log.Exception("未处理的 UI 异常", e.Exception);
             };
             AppDomain.CurrentDomain.UnhandledException += delegate(object sender, UnhandledExceptionEventArgs e)
             {
+                CrashLog.WriteException("appdomain-unhandled", e.ExceptionObject as Exception);
                 Log.Exception("未处理的进程异常", e.ExceptionObject as Exception);
             };
 
@@ -112,6 +114,7 @@ namespace ScreenCurtain
                 }
                 catch (Exception ex)
                 {
+                    CrashLog.WriteException("main-exception", ex);
                     Log.Exception("主程序异常退出", ex);
                     MessageBox.Show("幕帘发生错误，已写入日志。\r\n" + ex.Message, "幕帘", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }

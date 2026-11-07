@@ -78,6 +78,7 @@ namespace ScreenCurtain
             try { if (_main != null && !_main.IsDisposed) _main.Close(); } catch { }
             try { if (_onboarding != null && !_onboarding.IsDisposed) _onboarding.CloseForExit(); } catch { }
             try { _control.Close(); _control.Dispose(); } catch { }
+            Log.Flush(1200);
             ExitThread();
         }
 

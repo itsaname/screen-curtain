@@ -325,17 +325,32 @@ namespace ScreenCurtain
                     string id64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(pair.Key));
                     lines.Add(id64 + "|" + (pair.Value ? "1" : "0"));
                 }
-                string tmp = AppPaths.AudioStateFile + ".tmp";
+                string tmp = AppPaths.AudioStateFile + ".tmp." + Guid.NewGuid().ToString("N");
                 File.WriteAllLines(tmp, lines.ToArray(), new UTF8Encoding(false));
-                if (File.Exists(AppPaths.AudioStateFile))
+                for (int attempt = 0; attempt < 5; attempt++)
                 {
-                    try { File.Replace(tmp, AppPaths.AudioStateFile, null); }
-                    catch { File.Delete(AppPaths.AudioStateFile); File.Move(tmp, AppPaths.AudioStateFile); }
+                    try
+                    {
+                        if (File.Exists(AppPaths.AudioStateFile))
+                        {
+                            File.Replace(tmp, AppPaths.AudioStateFile, null);
+                        }
+                        else
+                        {
+                            File.Move(tmp, AppPaths.AudioStateFile);
+                        }
+                        return;
+                    }
+                    catch (IOException)
+                    {
+                        Thread.Sleep(100 * (attempt + 1));
+                    }
                 }
-                else
-                {
-                    File.Move(tmp, AppPaths.AudioStateFile);
-                }
+
+                // A network/synced folder can keep the marker open. Leave the
+                // temp file for diagnostics rather than deleting the last
+                // known-good state.
+                Log.Warn("音频恢复状态文件被占用，未能替换：{0}", AppPaths.AudioStateFile);
             }
             catch (Exception ex)
             {
