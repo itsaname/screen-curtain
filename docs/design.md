@@ -1,4 +1,4 @@
-﻿# ScreenCurtain（幕帘）设计约束与实现方案
+# ScreenCurtain（幕帘）设计约束与实现方案
 
 > 文档版本：1.2.0（实现与交付）  
 > 目标平台：Windows 11（23H2 / 24H2 / 25H2，x64）  
@@ -806,7 +806,7 @@ GuardBackup (HKLM\SOFTWARE\ScreenCurtain\GuardBackup)
 
 ### 7.2 当前构建与目标 UI 的关系
 
-1.1 已按 `ui-design.md` 完成首次运行 3 步向导、主窗口、独立设置窗口（常规/熄屏/更新保护/诊断与关于）、托盘、退出确认和恢复失败处理。`build\ScreenCurtain.exe` 与安装版/绿色版使用同一主程序；绿色版靠同目录 `portable.mode` 切换数据路径。首版仍为浅色中文，不提供开机自启、深色主题或英文界面。
+1.1 已按 `ui-design.md` 完成首次运行 3 步向导、主窗口、独立设置窗口（常规/熄屏/更新保护/诊断与关于）、托盘、退出确认和恢复失败处理。`build\ScreenCurtain.exe` 与安装版/绿色版使用同一主程序；绿色版靠同目录 `portable.mode` 切换数据路径。当前为浅色中英双语界面；不提供开机自启或深色主题。
 
 ### 7.3 命令行接口（非 GUI）
 
