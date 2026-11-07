@@ -14,7 +14,6 @@ namespace ScreenCurtain
         private readonly object _sync = new object();
         private readonly ManualResetEvent _doneEvent = new ManualResetEvent(false);
         private readonly object _writeSync = new object();
-
         private GuardState _state = GuardState.Off;
         private string _message = "更新重启保护未启动";
         private Thread _worker;
@@ -25,6 +24,7 @@ namespace ScreenCurtain
         private string _pipeName;
         private volatile bool _stopping;
         private volatile bool _wasActive;
+        private volatile bool _startPaused;
         private volatile bool _restoreAcknowledged;
         private volatile bool _restoreFailed;
         private bool _disposed;        public event EventHandler<GuardStatusEventArgs> StatusChanged;
@@ -39,8 +39,12 @@ namespace ScreenCurtain
             get { lock (_sync) { return _message; } }
         }
 
-        public bool Start()
+        public bool Start(bool startPaused = false)
         {
+            if (State == GuardState.Paused)
+            {
+                return Resume();
+            }
             if (State == GuardState.Degraded)
             {
                 // Repair path: first close any stale helper/pipe so an old
@@ -58,6 +62,7 @@ namespace ScreenCurtain
 
                 _stopping = false;
                 _wasActive = false;
+                _startPaused = startPaused;
                 _restoreAcknowledged = false;
                 _restoreFailed = false;
                 _doneEvent.Reset();
@@ -73,9 +78,36 @@ namespace ScreenCurtain
             return true;
         }
 
-        public void Stop()
+        public bool Pause()
         {
-            bool shouldWait = false;
+            lock (_sync)
+            {
+                if (_disposed || _state != GuardState.Active) return false;
+            }
+            if (!WriteLine(PipeProtocol.Pause))
+            {
+                SetStateFromAny(GuardState.Degraded, "无法通知更新保护助手暂停");
+                return false;
+            }
+            return true;
+        }
+
+        public bool Resume()
+        {
+            lock (_sync)
+            {
+                if (_disposed || _state != GuardState.Paused) return false;
+            }
+            if (!WriteLine(PipeProtocol.Resume))
+            {
+                SetStateFromAny(GuardState.Degraded, "无法通知更新保护助手恢复");
+                return false;
+            }
+            return true;
+        }
+
+        public void Stop()
+        {            bool shouldWait = false;
             lock (_sync)
             {
                 if (_disposed && _state == GuardState.Off) return;
@@ -183,7 +215,7 @@ namespace ScreenCurtain
 
                 Task waitTask = server.WaitForConnectionAsync();
                 string launchError;
-                if (!LaunchHelper(pipeName, token, out launchError))
+                if (!LaunchHelper(pipeName, token, _startPaused, out launchError))
                 {
                     SetState(GuardState.Degraded, launchError);
                     return;
@@ -248,6 +280,14 @@ namespace ScreenCurtain
                     _wasActive = true;
                     SetState(GuardState.Active, message);
                 }
+                else if (status.StartsWith(PipeProtocol.Paused, StringComparison.OrdinalIgnoreCase))
+                {
+                    string message = status.Length > PipeProtocol.Paused.Length
+                        ? status.Substring(PipeProtocol.Paused.Length).Trim()
+                        : "更新保护已就绪";
+                    _wasActive = true;
+                    SetState(GuardState.Paused, message);
+                }
                 else if (status.StartsWith(PipeProtocol.Error, StringComparison.OrdinalIgnoreCase))
                 {
                     string message = status.Length > PipeProtocol.Error.Length
@@ -288,7 +328,22 @@ namespace ScreenCurtain
                         break;
                     }
 
-                    if (line.StartsWith(PipeProtocol.Degraded, StringComparison.OrdinalIgnoreCase))
+                    if (line.StartsWith(PipeProtocol.Paused, StringComparison.OrdinalIgnoreCase))
+                    {
+                        string message = line.Length > PipeProtocol.Paused.Length
+                            ? line.Substring(PipeProtocol.Paused.Length).Trim()
+                            : "更新保护已暂停";
+                        SetState(GuardState.Paused, message);
+                    }
+                    else if (line.StartsWith(PipeProtocol.Active, StringComparison.OrdinalIgnoreCase))
+                    {
+                        string message = line.Length > PipeProtocol.Active.Length
+                            ? line.Substring(PipeProtocol.Active.Length).Trim()
+                            : "更新保护已启用";
+                        _wasActive = true;
+                        SetState(GuardState.Active, message);
+                    }
+                    else if (line.StartsWith(PipeProtocol.Degraded, StringComparison.OrdinalIgnoreCase))
                     {
                         string message = line.Length > PipeProtocol.Degraded.Length
                             ? line.Substring(PipeProtocol.Degraded.Length).Trim()
@@ -332,7 +387,7 @@ namespace ScreenCurtain
             }
         }
 
-        private bool LaunchHelper(string pipeName, string token, out string error)
+        private bool LaunchHelper(string pipeName, string token, bool startPaused, out string error)
         {
             error = null;
             IntPtr helperProcess = IntPtr.Zero;
@@ -342,7 +397,8 @@ namespace ScreenCurtain
                 string exe = Application.ExecutablePath;
                 string args = "--update-guard --parent " + pid +
                               " --pipe " + PipeProtocol.Quote(pipeName) +
-                              " --token " + PipeProtocol.Quote(token);
+                              " --token " + PipeProtocol.Quote(token) +
+                              (startPaused ? " --start-paused" : "");
 
                 SHELLEXECUTEINFO info = new SHELLEXECUTEINFO();
                 info.cbSize = Marshal.SizeOf(typeof(SHELLEXECUTEINFO));
@@ -395,10 +451,20 @@ namespace ScreenCurtain
 
         private void SetState(GuardState state, string message)
         {
+            SetStateCore(state, message, true);
+        }
+
+        private void SetStateFromAny(GuardState state, string message)
+        {
+            SetStateCore(state, message, false);
+        }
+
+        private void SetStateCore(GuardState state, string message, bool requireWorker)
+        {
             bool changed;
             lock (_sync)
             {
-                if (Thread.CurrentThread != _worker)
+                if (requireWorker && Thread.CurrentThread != _worker)
                 {
                     return;
                 }

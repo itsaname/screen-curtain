@@ -11,6 +11,7 @@ namespace ScreenCurtain
         private static readonly object PolicySync = new object();
         private static readonly object WriteSync = new object();
         private static bool _restored;
+        private static volatile bool _paused;
         private static int _healthFailures;
         private static PolicySnapshot _snapshot;
         private static StreamReader _reader;
@@ -30,6 +31,7 @@ namespace ScreenCurtain
             int parentPid = PipeProtocol.IntArgument(args, "--parent", 0);
             string pipeName = PipeProtocol.Argument(args, "--pipe");
             string token = PipeProtocol.Argument(args, "--token");
+            bool startPaused = args != null && Array.IndexOf(args, "--start-paused") >= 0;
 
             if (parentPid <= 0 || string.IsNullOrEmpty(pipeName) || string.IsNullOrEmpty(token))
             {
@@ -91,7 +93,14 @@ namespace ScreenCurtain
                         PolicyManager.RecoverOrphaned();
                         _snapshot = PolicyManager.Capture(parentPid);
                         _snapshot.Save();
-                        PolicyManager.ApplyTemporary();
+                        if (startPaused)
+                        {
+                            _paused = true;
+                        }
+                        else
+                        {
+                            PolicyManager.ApplyTemporary();
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -112,8 +121,12 @@ namespace ScreenCurtain
                     return;
                 }
 
-                WriteLine(PipeProtocol.Active + " 更新保护已启用（临时策略）");
-                Log.Info("update-guard 已启用，父进程 {0}", parentPid);
+                WriteLine(startPaused
+                    ? PipeProtocol.Paused + " 更新保护已就绪（等待熄屏）"
+                    : PipeProtocol.Active + " 更新保护已启用（临时策略）");
+                Log.Info(startPaused
+                    ? "update-guard 已就绪（已暂停），父进程 {0}"
+                    : "update-guard 已启用，父进程 {0}", parentPid);
 
                 _healthTimer = new Timer(HealthTick, null, 60000, 60000);
 
@@ -140,6 +153,54 @@ namespace ScreenCurtain
                     {
                         RestoreAndExit("收到恢复命令", true);
                         return;
+                    }
+
+                    if (line.StartsWith(PipeProtocol.Pause, StringComparison.OrdinalIgnoreCase))
+                    {
+                        try
+                        {
+                            lock (PolicySync)
+                            {
+                                if (!_paused)
+                                {
+                                    PolicyManager.Restore(_snapshot);
+                                    _paused = true;
+                                    _healthFailures = 0;
+                                }
+                            }
+                            WriteLine(PipeProtocol.Paused + " 更新保护已暂停（仅熄屏期间启用）");
+                            Log.Info("update-guard 已暂停，策略已恢复");
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Exception("暂停更新保护失败", ex);
+                            WriteLine(PipeProtocol.Error + " 暂停失败：" + OneLine(ex.Message));
+                        }
+                        continue;
+                    }
+
+                    if (line.StartsWith(PipeProtocol.Resume, StringComparison.OrdinalIgnoreCase))
+                    {
+                        try
+                        {
+                            lock (PolicySync)
+                            {
+                                if (_paused)
+                                {
+                                    PolicyManager.ApplyTemporary();
+                                    _paused = false;
+                                    _healthFailures = 0;
+                                }
+                            }
+                            WriteLine(PipeProtocol.Active + " 更新保护已恢复（仅熄屏期间启用）");
+                            Log.Info("update-guard 已恢复临时策略");
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Exception("恢复更新保护失败", ex);
+                            WriteLine(PipeProtocol.Error + " 恢复失败：" + OneLine(ex.Message));
+                        }
+                        continue;
                     }
 
                     if (line.StartsWith("PING", StringComparison.OrdinalIgnoreCase))
@@ -176,7 +237,7 @@ namespace ScreenCurtain
             {
                 lock (PolicySync)
                 {
-                    if (_restored)
+                    if (_restored || _paused)
                     {
                         return;
                     }

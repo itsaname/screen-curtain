@@ -2,7 +2,7 @@
 
 ScreenCurtain 是一个面向 Windows 11 的熄屏工具。它会把所有显示器盖上一层无边框纯黑画面，并在支持的情况下只关闭屏幕背光，让显示器、USB Hub 和接在 Hub 上的键鼠继续工作。鼠标移动不会退出，点击鼠标或按键即可恢复。
 
-当前版本：**1.2.0**。应用界面、安装器和卸载器都支持中文/English。
+当前版本：**1.3.0**。应用界面、安装器和卸载器都支持中文/English。
 
 **English:** ScreenCurtain is a Windows 11 blackout tool. It covers every display with a borderless black layer and turns off only the panel backlight where supported, keeping monitors and their USB hubs powered. Move the mouse freely; a click or keypress restores the desktop. The app, installer and uninstaller are bilingual.
 
@@ -10,9 +10,9 @@ ScreenCurtain 是一个面向 Windows 11 的熄屏工具。它会把所有显示
 
 | 版本 | 说明 |
 | --- | --- |
-| [安装版](https://github.com/itsaname/screen-curtain/releases/download/v1.2.0/ScreenCurtain-Setup-1.2.0.exe) | 按用户安装，不需要管理员权限 |
-| [绿色版](https://github.com/itsaname/screen-curtain/releases/download/v1.2.0/ScreenCurtain-1.2.0-portable.zip) | 解压即用，配置和日志保存在同目录 `data\` |
-| [SHA256SUMS](https://github.com/itsaname/screen-curtain/releases/download/v1.2.0/SHA256SUMS.txt) | 下载后校验文件完整性 |
+| [安装版](https://github.com/itsaname/screen-curtain/releases/download/v1.3.0/ScreenCurtain-Setup-1.3.0.exe) | 按用户安装，不需要管理员权限 |
+| [绿色版](https://github.com/itsaname/screen-curtain/releases/download/v1.3.0/ScreenCurtain-1.3.0-portable.zip) | 解压即用，配置和日志保存在同目录 `data\` |
+| [SHA256SUMS](https://github.com/itsaname/screen-curtain/releases/download/v1.3.0/SHA256SUMS.txt) | 下载后校验文件完整性 |
 
 也可以直接从 [GitHub Releases](https://github.com/itsaname/screen-curtain/releases/latest) 获取最新版本。
 
@@ -29,10 +29,12 @@ ScreenCurtain 是一个面向 Windows 11 的熄屏工具。它会把所有显示
 - **不关闭显示器电源**：黑色熄屏流程不会发送 `VCP 0xD6` 电源命令。这样即使显示器对 DDC 电源控制支持不好，也不会出现“关了以后醒不过来”的情况。
 - **点击或按键恢复**：鼠标移动不会退出；鼠标按键、滚轮（可关闭）或键盘按键会恢复桌面、亮度和音频。首个唤醒输入会被吞掉，避免误触到桌面。
 - **系统静音**：熄屏时静音当前所有活动播放设备，恢复时还原每台设备原来的静音状态。黑屏期间新接入的播放设备也会被静音。
-- **更新重启保护**：运行时以管理员权限临时暂停 Windows Update 自动更新并阻止更新重启，退出或关闭保护时恢复原策略。
+- **更新重启保护**：运行时以管理员权限临时暂停 Windows Update 自动更新并阻止更新重启，退出或关闭保护时恢复原策略。可在设置中选择“程序启动后”或“仅熄屏期间”；两种模式都只在程序启动时请求一次 UAC。后者启动后先暂停并恢复策略，熄屏时通过已提权助手启用，唤醒后暂停，不会反复弹 UAC。
 - **预览 3 秒**：预览会复用实际熄屏的背光调节、静音、黑层、隐藏光标和去圆角效果，3 秒后按相同顺序恢复。
 - **托盘与通知**：黑屏时托盘图标不会被隐藏，只是被黑层自然盖住；本程序的托盘提示和错误消息会在恢复后合并显示。
 - **中英文界面**：默认跟随系统语言，也可以在设置中手动切换，重启后生效。
+- **开机自启动**：可在设置中写入当前用户启动项，不需要管理员权限；移动便携版目录后会刷新启动路径。
+- **暗色主题**：支持自动、浅色、深色三种外观；跟随系统或手动选择，重启后生效。
 
 ## 系统要求
 
@@ -99,7 +101,9 @@ Windows 设置里可能临时出现“部分设置由组织管理”，这是临
 
 可以在设置里调整：
 
-- 启动后最小化、关闭窗口行为、退出确认、托盘通知；
+- 启动后最小化、开机自启动、关闭窗口行为、退出确认、托盘通知；
+- 界面语言：自动 / 中文 / English；
+- 主题：自动 / 浅色 / 深色；
 - 全局快捷键；
 - 是否尝试物理关屏；
 - 笔记本上的物理关屏（默认关闭）；
@@ -107,7 +111,6 @@ Windows 设置里可能临时出现“部分设置由组织管理”，这是临
 - 保持系统唤醒、滚轮恢复、恢复前台窗口；
 - 熄屏时静音系统音频；
 - 更新保护开关和启动时自动尝试；
-- 界面语言：自动 / 中文 / English；
 - 诊断信息、日志目录和重置设置。
 
 ## 安装器静默参数
@@ -176,7 +179,7 @@ ScreenCurtain.exe --repair-update       # 提权恢复遗留更新策略
 
 - [设计约束与实现方案](docs/design.md)
 - [完整 UI/UX 设计规范](docs/ui-design.md)
-- [1.2.0 发布说明](dist/1.2.0/RELEASE-NOTES.md)
+- [1.3.0 发布说明](dist/1.3.0/RELEASE-NOTES.md)
 
 ## 隐私
 

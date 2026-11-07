@@ -109,7 +109,10 @@ namespace ScreenCurtain
         public bool AllowWheelWake = false;
         public bool PreventSleep = true;
         public bool StartMinimized = false;
+        public bool StartWithWindows = false;
         public string Language = "auto";
+        public string Theme = "auto";
+        public string GuardStartMode = "startup";
         public bool TryPhysicalOff = true;
         public bool LaptopPhysicalOff = false;
         public bool DimExternalBacklight = true;
@@ -164,8 +167,13 @@ namespace ScreenCurtain
                 s.AllowWheelWake = ReadBool(values, "AllowWheelWake", s.AllowWheelWake);
                 s.PreventSleep = ReadBool(values, "PreventSleep", s.PreventSleep);
                 s.StartMinimized = ReadBool(values, "StartMinimized", s.StartMinimized);
+                s.StartWithWindows = ReadBool(values, "StartWithWindows", s.StartWithWindows);
                 string language = ReadString(values, "Language", s.Language).ToLowerInvariant();
                 if (language == "zh" || language == "en" || language == "auto") s.Language = language;
+                string theme = ReadString(values, "Theme", s.Theme).ToLowerInvariant();
+                if (theme == "light" || theme == "dark" || theme == "auto") s.Theme = theme;
+                string guardMode = ReadString(values, "GuardStartMode", s.GuardStartMode).ToLowerInvariant();
+                if (guardMode == "startup" || guardMode == "blackout") s.GuardStartMode = guardMode;
                 s.TryPhysicalOff = ReadBool(values, "TryPhysicalOff", s.TryPhysicalOff);
                 s.LaptopPhysicalOff = ReadBool(values, "LaptopPhysicalOff", s.LaptopPhysicalOff);
                 s.DimExternalBacklight = ReadBool(values, "DimExternalBacklight", s.DimExternalBacklight);
@@ -205,7 +213,10 @@ namespace ScreenCurtain
                     "AllowWheelWake=" + (AllowWheelWake ? "true" : "false"),
                     "PreventSleep=" + (PreventSleep ? "true" : "false"),
                     "StartMinimized=" + (StartMinimized ? "true" : "false"),
+                    "StartWithWindows=" + (StartWithWindows ? "true" : "false"),
                     "Language=" + Language,
+                    "Theme=" + Theme,
+                    "GuardStartMode=" + GuardStartMode,
                     "TryPhysicalOff=" + (TryPhysicalOff ? "true" : "false"),
                     "LaptopPhysicalOff=" + (LaptopPhysicalOff ? "true" : "false"),
                     "DimExternalBacklight=" + (DimExternalBacklight ? "true" : "false"),

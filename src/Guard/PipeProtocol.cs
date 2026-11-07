@@ -16,6 +16,9 @@ namespace ScreenCurtain
         public const string Active = "ACTIVE";
         public const string Restore = "RESTORE";
         public const string Restored = "RESTORED";
+        public const string Pause = "PAUSE";
+        public const string Paused = "PAUSED";
+        public const string Resume = "RESUME";
         public const string Error = "ERROR";
         public const string Degraded = "DEGRADED";
 

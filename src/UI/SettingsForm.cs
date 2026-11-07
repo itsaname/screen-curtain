@@ -56,19 +56,23 @@ namespace ScreenCurtain
             _nav.ItemHeight = 38;
             _nav.BorderStyle = BorderStyle.None;
             _nav.BackColor = AppTheme.Surface;
+            _nav.ForeColor = AppTheme.TextPrimary;
             _nav.SetBounds(20, 90, 180, 440);
             _nav.Items.Add(Localization.T("常规"));
             _nav.Items.Add(Localization.T("熄屏"));
             _nav.Items.Add(Localization.T("更新保护"));
             _nav.Items.Add(Localization.T("诊断与关于"));
             _nav.SelectedIndexChanged += delegate { if (!_loading) ShowPage(_nav.SelectedIndex); };
+            AppTheme.ApplyNativeTheme(_nav);
             Controls.Add(_nav);
 
             _pagePanel = new Panel();
             _pagePanel.SetBounds(214, 90, 616, 440);
             _pagePanel.BackColor = AppTheme.Surface;
+            _pagePanel.ForeColor = AppTheme.TextPrimary;
             _pagePanel.BorderStyle = BorderStyle.FixedSingle;
             _pagePanel.AutoScroll = true;
+            AppTheme.ApplyNativeTheme(_pagePanel);
             Controls.Add(_pagePanel);
 
             _closeButton = UiLayout.PrimaryButton("完成");
@@ -110,14 +114,14 @@ namespace ScreenCurtain
             int y = 22;
             AddSection("界面语言 / Language", ref y);
             AddLabel("界面语言", "切换后重启程序生效。", ref y);
-            ComboBox language = new ComboBox();
-            language.DropDownStyle = ComboBoxStyle.DropDownList;
-            language.Items.Add("自动 / Auto");
-            language.Items.Add("中文");
-            language.Items.Add("English");
-            language.SelectedIndex = _settings.Language == "en" ? 2 : (_settings.Language == "zh" ? 1 : 0);
-            language.SetBounds(22, y, 220, 28);
-            language.SelectedIndexChanged += delegate
+            DarkSelect language = new DarkSelect(new string[]
+            {
+                Localization.IsEnglish ? "Auto" : "自动 / Auto",
+                Localization.IsEnglish ? "Chinese" : "中文",
+                "English"
+            }, _settings.Language == "en" ? 2 : (_settings.Language == "zh" ? 1 : 0));
+            language.SetBounds(22, y, 220, 30);
+            language.SelectionChanged += delegate
             {
                 if (_loading) return;
                 string code = language.SelectedIndex == 2 ? "en" : (language.SelectedIndex == 1 ? "zh" : "auto");
@@ -131,6 +135,28 @@ namespace ScreenCurtain
             _pagePanel.Controls.Add(language);
             y += 42;
 
+            AddSection("外观 / Appearance", ref y);
+            AddLabel("主题", "切换后重启程序生效。", ref y);
+            DarkSelect theme = new DarkSelect(new string[]
+            {
+                Localization.T("自动", "Auto"),
+                Localization.T("浅色", "Light"),
+                Localization.T("深色", "Dark")
+            }, _settings.Theme == "dark" ? 2 : (_settings.Theme == "light" ? 1 : 0));
+            theme.SetBounds(22, y, 220, 30);
+            theme.SelectionChanged += delegate
+            {
+                if (_loading) return;
+                _settings.Theme = theme.SelectedIndex == 2 ? "dark" : (theme.SelectedIndex == 1 ? "light" : "auto");
+                _settings.Save();
+                MessageBox.Show(this,
+                    Localization.T("主题将在重启程序后生效。", "The theme will change after restarting the app."),
+                    Localization.T("主题", "Theme"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+            _pagePanel.Controls.Add(theme);
+            y += 42;
+
             AddSection("窗口与启动", ref y);
             AddToggle("启动后最小化到任务栏", "启动时不抢占焦点；更新保护仍会在后台尝试启动。", ref y, _settings.StartMinimized, delegate(bool value)
             {
@@ -138,14 +164,34 @@ namespace ScreenCurtain
                 _settings.Save();
             });
 
+            ToggleSwitch startupToggle = null;
+            startupToggle = AddToggle("开机自启动", "登录 Windows 后自动启动幕帘。是否最小化由上面的“启动后最小化”决定。", ref y, _settings.StartWithWindows, delegate(bool value)
+            {
+                if (StartupRegistration.SetEnabled(value))
+                {
+                    _settings.StartWithWindows = value;
+                    _settings.Save();
+                }
+                else
+                {
+                    _settings.StartWithWindows = false;
+                    _settings.Save();
+                    if (startupToggle != null) startupToggle.Checked = false;
+                    MessageBox.Show(this,
+                        Localization.T("无法写入开机自启动项，请检查当前用户注册表权限。", "Could not write the startup entry. Check the current user's registry permissions."),
+                        Localization.T("开机自启动", "Start with Windows"),
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            });
+
             AddLabel("关闭主窗口时", "保护开启时无论此选项如何都会最小化到任务栏，以保证关机否决的可见窗口。", ref y);
-            ComboBox closeAction = new ComboBox();
-            closeAction.DropDownStyle = ComboBoxStyle.DropDownList;
-            closeAction.Items.Add(Localization.T("最小化到任务栏"));
-            closeAction.Items.Add(Localization.T("退出幕帘"));
-            closeAction.SelectedIndex = _settings.CloseAction == CloseAction.Exit ? 1 : 0;
-            closeAction.SetBounds(22, y, 220, 28);
-            closeAction.SelectedIndexChanged += delegate
+            DarkSelect closeAction = new DarkSelect(new string[]
+            {
+                Localization.T("最小化到任务栏"),
+                Localization.T("退出幕帘")
+            }, _settings.CloseAction == CloseAction.Exit ? 1 : 0);
+            closeAction.SetBounds(22, y, 220, 30);
+            closeAction.SelectionChanged += delegate
             {
                 if (_loading) return;
                 _settings.CloseAction = closeAction.SelectedIndex == 1 ? CloseAction.Exit : CloseAction.Minimize;
@@ -165,7 +211,7 @@ namespace ScreenCurtain
                 _settings.Save();
             });
 
-            AddInfo("开机自启、深色主题和英文界面属于后续版本，本版本不会显示不可用的开关。", ref y);
+            AddInfo("主题和界面语言在重启程序后生效；开机自启动使用当前用户注册表，不需要管理员权限。", ref y);
         }
 
         private void BuildScreenPage()
@@ -350,6 +396,34 @@ namespace ScreenCurtain
             _pagePanel.Controls.Add(toggleLabel);
             y += 40;
 
+            AddLabel("保护启动时机", "两种方式都在程序启动时请求一次 UAC。“仅熄屏期间”启动后先暂停并恢复策略，进入熄屏时才启用。", ref y);
+            DarkSelect guardMode = new DarkSelect(new string[]
+            {
+                Localization.T("程序启动后", "At app startup"),
+                Localization.T("仅熄屏期间", "Blackout only")
+            }, _settings.GuardStartMode == "blackout" ? 1 : 0);
+            guardMode.SetBounds(22, y, 240, 30);
+            guardMode.SelectionChanged += delegate
+            {
+                if (_loading) return;
+                _settings.GuardStartMode = guardMode.SelectedIndex == 1 ? "blackout" : "startup";
+                _settings.Save();
+                UpdateGuardControls();
+                if (guardMode.SelectedIndex == 0 && _settings.GuardEnabled &&
+                    (_guard.State == GuardState.Off || _guard.State == GuardState.Paused))
+                {
+                    _owner.SetGuardEnabled(true);
+                    UpdateGuardControls();
+                }
+                else if (guardMode.SelectedIndex == 1)
+                {
+                    _owner.PauseGuardIfIdle();
+                    UpdateGuardControls();
+                }
+            };
+            _pagePanel.Controls.Add(guardMode);
+            y += 44;
+
             _guardAction = UiLayout.SecondaryButton("启用保护");
             _guardAction.SetBounds(22, y, 120, 34);
             _guardAction.Click += delegate { _owner.SetGuardEnabled(true); UpdateGuardControls(); };
@@ -375,14 +449,16 @@ namespace ScreenCurtain
             try { count = DisplayManager.Enumerate().Count; } catch { count = 0; }
             StringBuilder sb = new StringBuilder();
             sb.AppendLine((Localization.IsEnglish ? "Version: " : "版本：") + ReleaseInfo.FullVersion);
-            sb.AppendLine((Localization.IsEnglish ? "System: " : "系统：") + Environment.OSVersion.VersionString + "（" + (Environment.Is64BitProcess ? Localization.T("64 位进程") : Localization.T("32 位进程")) + "）");
-            sb.AppendLine(".NET：" + Environment.Version);
+            string bitness = Localization.T(Environment.Is64BitProcess ? "64 位进程" : "32 位进程");
+            sb.AppendLine((Localization.IsEnglish ? "System: " : "系统：") + Environment.OSVersion.VersionString +
+                (Localization.IsEnglish ? " (" + bitness + ")" : "（" + bitness + "）"));
+            sb.AppendLine((Localization.IsEnglish ? ".NET: " : ".NET：") + Environment.Version);
             sb.AppendLine((Localization.IsEnglish ? "Displays: " : "显示器：") + count + (Localization.IsEnglish ? " display(s)" : " 台"));
             sb.AppendLine((Localization.IsEnglish ? "Data directory: " : "数据目录：") + AppPaths.DataDirectory);
             sb.AppendLine((Localization.IsEnglish ? "Config file: " : "配置文件：") + AppPaths.SettingsFile);
-            sb.AppendLine((Localization.IsEnglish ? "Log directory: " : "日志目录：") + AppPaths.LogDirectory);
+            sb.AppendLine((Localization.IsEnglish ? "Log directory: " : "日志目录：") + Log.DirectoryPath);
             sb.AppendLine((Localization.IsEnglish ? "Portable: " : "便携模式：") + (AppPaths.IsPortable ? Localization.T("是") : Localization.T("否")) + (AppPaths.PortableFallback ? Localization.T("（已回退到 LocalAppData）") : ""));
-            sb.AppendLine((Localization.IsEnglish ? "Update protection: " : "更新保护：") + _guard.State + " " + _guard.Message);
+            sb.AppendLine((Localization.IsEnglish ? "Update protection: " : "更新保护：") + GuardStateText(_guard.State) + " " + Localization.T(_guard.Message));
             AddInfo(sb.ToString().TrimEnd(), ref y);
 
             Button copy = UiLayout.SecondaryButton("复制诊断信息");
@@ -396,7 +472,7 @@ namespace ScreenCurtain
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(this, "复制失败：" + ex.Message, "幕帘", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show(this, Localization.T("复制失败：") + ex.Message, Localization.T("幕帘"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             };
             _pagePanel.Controls.Add(copy);
@@ -420,7 +496,22 @@ namespace ScreenCurtain
             y += 46;
 
             AddSection("关于", ref y);
-            AddInfo("幕帘 ScreenCurtain " + ReleaseInfo.Version + "。一个不锁屏、不驻留驱动、不改系统服务的屏幕黑屏与更新重启保护工具。", ref y);
+            AddInfo(Localization.IsEnglish
+                ? "ScreenCurtain " + ReleaseInfo.Version + ". A screen-blackout and update-restart guard that does not lock the session, install drivers, or change system services."
+                : "幕帘 ScreenCurtain " + ReleaseInfo.Version + "。一个不锁屏、不驻留驱动、不改系统服务的屏幕黑屏与更新重启保护工具。", ref y);
+        }
+
+        private static string GuardStateText(GuardState state)
+        {
+            switch (state)
+            {
+                case GuardState.Active: return Localization.T("已开启");
+                case GuardState.Paused: return Localization.T("保护待命");
+                case GuardState.Starting: return Localization.T("正在启动");
+                case GuardState.Degraded: return Localization.T("降级 · 需要修复");
+                case GuardState.Stopping: return Localization.T("正在恢复");
+                default: return Localization.T("未启用");
+            }
         }
 
         private void ResetSettings()
@@ -432,7 +523,8 @@ namespace ScreenCurtain
 
             try
             {
-                if (_owner.GuardStateValue == GuardState.Active || _owner.GuardStateValue == GuardState.Degraded || _owner.GuardStateValue == GuardState.Starting)
+                if (_owner.GuardStateValue == GuardState.Active || _owner.GuardStateValue == GuardState.Paused ||
+                    _owner.GuardStateValue == GuardState.Degraded || _owner.GuardStateValue == GuardState.Starting)
                 {
                     _owner.SetGuardEnabled(false);
                 }
@@ -474,17 +566,22 @@ namespace ScreenCurtain
             else if (state == GuardState.Starting) { status = "正在启动"; color = AppTheme.Warning; }
             else if (state == GuardState.Degraded) { status = "降级 · 需要修复"; color = AppTheme.Warning; }
             else if (state == GuardState.Stopping) { status = "正在恢复"; color = AppTheme.Warning; }
+            else if (state == GuardState.Paused) { status = "保护待命 · 仅熄屏期间"; color = AppTheme.Accent; }
             else { status = "未启用"; color = AppTheme.TextSecondary; }
 
             _guardStatusLabel.Text = Localization.T("状态：") + Localization.T(status);
             _guardStatusLabel.ForeColor = color;
-            _guardMessageLabel.Text = _guard.Message ?? string.Empty;
+            _guardMessageLabel.Text = state == GuardState.Paused
+                ? Localization.T("更新策略已恢复；下次进入熄屏会复用已启动的保护进程，不再请求 UAC。")
+                : Localization.T(_guard.Message ?? string.Empty);
             _guardAction.Visible = state == GuardState.Degraded || state == GuardState.Off;
             _guardAction.Text = state == GuardState.Degraded ? "重试保护" : "启用保护";
+            _guardAction.Enabled = true;
             _guardRepair.Visible = state == GuardState.Degraded;
 
             _loading = true;
-            _guardToggle.Checked = state == GuardState.Active || state == GuardState.Starting || state == GuardState.Degraded;
+            _guardToggle.Checked = state == GuardState.Active || state == GuardState.Paused ||
+                state == GuardState.Starting || state == GuardState.Degraded;
             _loading = false;
         }
 
@@ -501,7 +598,7 @@ namespace ScreenCurtain
 
         private void AddSection(string text, ref int y)
         {
-            Label label = AppTheme.CreateLabel(text, AppTheme.SectionFont, AppTheme.TextPrimary);
+            Label label = AppTheme.CreateLabel(Localization.T(text), AppTheme.SectionFont, AppTheme.TextPrimary);
             label.SetBounds(22, y, 550, 26);
             _pagePanel.Controls.Add(label);
             y += 32;
@@ -509,36 +606,43 @@ namespace ScreenCurtain
 
         private void AddLabel(string text, string description, ref int y)
         {
-            Label label = AppTheme.CreateLabel(text, AppTheme.BodyFont, AppTheme.TextPrimary);
+            Label label = AppTheme.CreateLabel(Localization.T(text), AppTheme.BodyFont, AppTheme.TextPrimary);
             label.SetBounds(22, y, 550, 22);
             _pagePanel.Controls.Add(label);
             y += 22;
             if (!string.IsNullOrEmpty(description))
             {
-                Label desc = AppTheme.CreateLabel(description, AppTheme.SmallFont, AppTheme.TextSecondary);
-                desc.SetBounds(22, y, 550, 48);
+                string localized = Localization.T(description);
+                Label desc = AppTheme.CreateLabel(localized, AppTheme.SmallFont, AppTheme.TextSecondary);
+                Size measured = TextRenderer.MeasureText(localized, desc.Font, new Size(550, int.MaxValue), TextFormatFlags.WordBreak);
+                int height = Math.Max(34, measured.Height + 4);
+                desc.SetBounds(22, y, 550, height);
                 _pagePanel.Controls.Add(desc);
-                y += 48;
+                y += height;
             }
             y += 8;
         }
 
         private void AddInfo(string text, ref int y)
         {
-            Label label = AppTheme.CreateLabel(text, AppTheme.SmallFont, AppTheme.TextSecondary);
-            Size measured = TextRenderer.MeasureText(text, label.Font, new Size(550, int.MaxValue), TextFormatFlags.WordBreak);
+            string localized = Localization.T(text);
+            Label label = AppTheme.CreateLabel(localized, AppTheme.SmallFont, AppTheme.TextSecondary);
+            Size measured = TextRenderer.MeasureText(localized, label.Font, new Size(550, int.MaxValue), TextFormatFlags.WordBreak);
             label.SetBounds(22, y, 550, Math.Max(34, measured.Height + 12));
             _pagePanel.Controls.Add(label);
             y += label.Height + 10;
         }
 
-        private void AddToggle(string title, string description, ref int y, bool value, Action<bool> changed)
+        private ToggleSwitch AddToggle(string title, string description, ref int y, bool value, Action<bool> changed)
         {
-            Label label = AppTheme.CreateLabel(title, AppTheme.BodyFont, AppTheme.TextPrimary);
+            Label label = AppTheme.CreateLabel(Localization.T(title), AppTheme.BodyFont, AppTheme.TextPrimary);
             label.SetBounds(22, y, 470, 22);
             _pagePanel.Controls.Add(label);
-            Label desc = AppTheme.CreateLabel(description, AppTheme.SmallFont, AppTheme.TextSecondary);
-            desc.SetBounds(22, y + 22, 480, 46);
+            string localized = Localization.T(description);
+            Label desc = AppTheme.CreateLabel(localized, AppTheme.SmallFont, AppTheme.TextSecondary);
+            Size measured = TextRenderer.MeasureText(localized, desc.Font, new Size(480, int.MaxValue), TextFormatFlags.WordBreak);
+            int descHeight = Math.Max(46, measured.Height + 4);
+            desc.SetBounds(22, y + 22, 480, descHeight);
             _pagePanel.Controls.Add(desc);
             ToggleSwitch toggle = new ToggleSwitch();
             toggle.SetBounds(530, y + 2, 42, 24);
@@ -549,7 +653,8 @@ namespace ScreenCurtain
                 changed(toggle.Checked);
             };
             _pagePanel.Controls.Add(toggle);
-            y += 72;
+            y += 22 + descHeight + 8;
+            return toggle;
         }
 
         protected override void Dispose(bool disposing)

@@ -71,7 +71,7 @@ namespace ScreenCurtain.Setup
     {
         public const string ProductName = "幕帘 ScreenCurtain";
         public const string ShortName = "幕帘";
-        public const string Version = "1.2.0";
+        public const string Version = "1.3.0";
         public const string AppExe = "ScreenCurtain.exe";
         public const string AppConfig = "ScreenCurtain.exe.config";
         public const string UninstallerExe = "Uninstall.exe";
@@ -334,6 +334,15 @@ namespace ScreenCurtain.Setup
         {
             try { Registry.CurrentUser.DeleteSubKeyTree(SetupInfo.ArpKey, false); }
             catch (Exception ex) { SetupLog.Write("删除卸载项失败: {0}", ex.Message); }
+            try
+            {
+                using (RegistryKey run = Registry.CurrentUser.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Run", true))
+                {
+                    if (run != null) run.DeleteValue("ScreenCurtain", false);
+                }
+            }
+            catch (Exception ex) { SetupLog.Write("删除开机自启项失败: {0}", ex.Message); }
         }
 
         public static bool HasGuardBackup()

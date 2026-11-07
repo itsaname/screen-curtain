@@ -16,6 +16,8 @@ namespace ScreenCurtain
         {
             _settings = Settings.Load();
             Localization.Initialize(_settings.Language);
+            AppTheme.SetTheme(_settings.Theme);
+            try { StartupRegistration.SetEnabled(_settings.StartWithWindows); } catch { }
             _guard = new UpdateGuardClient();
             _control = new AppControlWindow(this);
             _control.Show();

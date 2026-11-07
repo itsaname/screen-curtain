@@ -241,7 +241,7 @@ namespace ScreenCurtain
                     ? Localization.T(" · 便携模式")
                     : Localization.T(" · 安装版"))),
                 AppTheme.SmallFont,
-                Color.FromArgb(130, 130, 130));
+                AppTheme.TextSecondary);
             version.SetBounds(20, 594, 400, 18);
             Controls.Add(version);
 
@@ -274,9 +274,9 @@ namespace ScreenCurtain
                 {
                     StartGuard();
                 }
-                else if (_guard.State == GuardState.Active || _guard.State == GuardState.Degraded)
+                else if (_guard.State == GuardState.Active || _guard.State == GuardState.Degraded || _guard.State == GuardState.Paused)
                 {
-                    EnableShutdownBlock(true);
+                    EnableShutdownBlock(_guard.State == GuardState.Active || _guard.State == GuardState.Degraded);
                     UpdateGuardUi(_guard.State, _guard.Message);
                 }
                 if (HasCommandLine("--open-settings"))
@@ -349,7 +349,9 @@ namespace ScreenCurtain
             if (!ok)
             {
                 int code = Marshal.GetLastWin32Error();
-                error = "快捷键 " + spec.Text + " 注册失败（可能被其他程序占用，Win32=" + code + "）。";
+                error = Localization.IsEnglish
+                    ? "Shortcut " + spec.Text + " registration failed (possibly in use by another app, Win32=" + code + ")."
+                    : "快捷键 " + spec.Text + " 注册失败（可能被其他程序占用，Win32=" + code + "）。";
                 if (old != null)
                 {
                     _hotkeyRegistered = Native.RegisterHotKey(Handle, HotkeyId, old.Modifiers, old.VirtualKey);
@@ -367,8 +369,30 @@ namespace ScreenCurtain
 
         public void SetGuardEnabled(bool enabled)
         {
-            if (enabled) StartGuard();
-            else StopGuard();
+            if (enabled)
+            {
+                _settings.GuardEnabled = true;
+                _settings.Save();
+                StartGuard();
+            }
+            else
+            {
+                StopGuard();
+            }
+        }
+
+        private bool IsBlackoutOnlyGuard()
+        {
+            return string.Equals(_settings.GuardStartMode, "blackout", StringComparison.OrdinalIgnoreCase);
+        }
+
+        public void PauseGuardIfIdle()
+        {
+            if (IsBlackoutOnlyGuard() && _settings.GuardEnabled &&
+                _blackout.State == BlackoutState.Idle && _guard.State == GuardState.Active)
+            {
+                _guard.Pause();
+            }
         }
 
         public void PreviewBlackout(int seconds)
@@ -430,12 +454,16 @@ namespace ScreenCurtain
         {
             if (_blackout.State != BlackoutState.Idle)
             {
-                _statusPill.SetStatus(Localization.T("黑屏中 · 点击或按键恢复"), AppTheme.Accent, Color.FromArgb(229, 241, 251), AppTheme.Accent);
+                _statusPill.SetStatus(Localization.T("黑屏中 · 点击或按键恢复"), AppTheme.Accent, AppTheme.AccentSoft, AppTheme.Accent);
                 return;
             }
             if (_guardState == GuardState.Active)
             {
                 _statusPill.SetStatus(Localization.T("保护已开启"), AppTheme.Success, AppTheme.SuccessSoft, AppTheme.Success);
+            }
+            else if (_guardState == GuardState.Paused)
+            {
+                _statusPill.SetStatus(Localization.T("保护待命 · 仅熄屏期间"), AppTheme.Accent, AppTheme.AccentSoft, AppTheme.Accent);
             }
             else if (_guardState == GuardState.Starting)
             {
@@ -449,9 +477,13 @@ namespace ScreenCurtain
             {
                 _statusPill.SetStatus(Localization.T("正在恢复设置"), AppTheme.Warning, AppTheme.WarningSoft, AppTheme.Warning);
             }
+            else if (_settings.GuardEnabled && IsBlackoutOnlyGuard())
+            {
+                _statusPill.SetStatus(Localization.T("保护待命 · 熄屏时启动"), AppTheme.Accent, AppTheme.AccentSoft, AppTheme.Accent);
+            }
             else
             {
-                _statusPill.SetStatus(Localization.T("保护未开启"), Color.FromArgb(139, 148, 158), AppTheme.NeutralSoft, AppTheme.TextSecondary);
+                _statusPill.SetStatus(Localization.T("保护未开启"), AppTheme.TextSecondary, AppTheme.NeutralSoft, AppTheme.TextSecondary);
             }
         }
 
@@ -471,6 +503,11 @@ namespace ScreenCurtain
                 case GuardState.Active:
                     summary = "已开启 · 正在阻止 Windows 更新重启";
                     reason = string.IsNullOrEmpty(message) ? "退出幕帘或关闭保护时恢复 Windows Update 原始设置。" : message;
+                    action = "关闭保护";
+                    break;
+                case GuardState.Paused:
+                    summary = "保护待命 · 仅熄屏期间启用";
+                    reason = "更新策略已恢复；下次进入熄屏会复用已启动的保护进程，不再请求 UAC。";
                     action = "关闭保护";
                     break;
                 case GuardState.Starting:
@@ -501,9 +538,9 @@ namespace ScreenCurtain
             _guardReasonLabel.Text = Localization.T(reason);
             _guardActionButton.Text = Localization.T(action);
             _guardActionButton.Enabled = actionEnabled;
-            _guardActionButton.ForeColor = state == GuardState.Active ? AppTheme.TextPrimary : AppTheme.Accent;
-            _guardActionButton.BackColor = state == GuardState.Active ? AppTheme.Surface : Color.FromArgb(235, 245, 255);
-            _guardActionButton.FlatAppearance.BorderColor = state == GuardState.Active ? AppTheme.Border : Color.FromArgb(180, 215, 245);
+            _guardActionButton.ForeColor = state == GuardState.Active || state == GuardState.Paused ? AppTheme.TextPrimary : AppTheme.Accent;
+            _guardActionButton.BackColor = state == GuardState.Active || state == GuardState.Paused ? AppTheme.Surface : AppTheme.AccentSoft;
+            _guardActionButton.FlatAppearance.BorderColor = state == GuardState.Active || state == GuardState.Paused ? AppTheme.Border : AppTheme.AccentBorder;
             _guardDetailsButton.Visible = true;
             UpdateStatusPill();
             _tray.SetGuardState(state, message);
@@ -535,12 +572,17 @@ namespace ScreenCurtain
             {
                 EnableShutdownBlock(true);
             }
-            else if (e.State == GuardState.Off)
+            else if (e.State == GuardState.Off || e.State == GuardState.Paused)
             {
                 EnableShutdownBlock(false);
             }
 
             UpdateGuardUi(e.State, e.Message);
+            if (e.State == GuardState.Paused && _blackout.State != BlackoutState.Idle &&
+                IsBlackoutOnlyGuard() && _settings.GuardEnabled)
+            {
+                _guard.Resume();
+            }
             if (e.State == GuardState.Degraded)
             {
                 _notifier.Warning("更新保护降级", "更新设置未能完整生效，请打开设置重试修复。");
@@ -549,7 +591,7 @@ namespace ScreenCurtain
 
         private void OnGuardAction()
         {
-            if (_guardState == GuardState.Active)
+            if (_guardState == GuardState.Active || _guardState == GuardState.Paused)
             {
                 bool confirmed = ConfirmDialog.Show(
                     this,
@@ -568,6 +610,13 @@ namespace ScreenCurtain
 
         private void StartGuard()
         {
+            if (_guard.State == GuardState.Paused)
+            {
+                _settings.GuardEnabled = true;
+                _settings.Save();
+                _guard.Resume();
+                return;
+            }
             if (_guardState == GuardState.Starting || _guardState == GuardState.Active || _guardState == GuardState.Stopping)
             {
                 return;
@@ -575,8 +624,8 @@ namespace ScreenCurtain
             _settings.GuardEnabled = true;
             _settings.Save();
             EnableShutdownBlock(true);
-            UpdateGuardUi(GuardState.Starting, "正在请求管理员权限并写入临时策略…");
-            _guard.Start();
+            UpdateGuardUi(GuardState.Starting, "正在请求管理员权限并启动更新保护…");
+            _guard.Start(IsBlackoutOnlyGuard());
         }
 
         private void StopGuard()
@@ -624,11 +673,15 @@ namespace ScreenCurtain
         private void EnterBlackout()
         {
             if (_blackout.State != BlackoutState.Idle) return;
+            if (IsBlackoutOnlyGuard() && _settings.GuardEnabled && _guard.State == GuardState.Paused)
+            {
+                _guard.Resume();
+            }
             if (!_blackout.Enter())
             {
-                string error = _blackout.LastError ?? "无法进入熄屏状态";
+                string error = _blackout.LastError ?? Localization.T("无法进入熄屏状态");
                 ShowNotice(error, true);
-                _notifier.Error("无法进入熄屏", error);
+                _notifier.Error(Localization.T("无法进入熄屏"), error);
             }
         }
 
@@ -653,6 +706,10 @@ namespace ScreenCurtain
 
             if (state == BlackoutState.Idle)
             {
+                if (IsBlackoutOnlyGuard() && _settings.GuardEnabled && _guard.State == GuardState.Active)
+                {
+                    _guard.Pause();
+                }
                 if (_pendingNotice != null)
                 {
                     ShowNotice(_pendingNotice, _pendingNoticeIsError);
@@ -739,7 +796,7 @@ namespace ScreenCurtain
             }
             catch (Exception ex)
             {
-                ShowNotice("无法打开日志目录：" + ex.Message, true);
+                ShowNotice(Localization.T("无法打开日志目录：") + ex.Message, true);
             }
         }
 
@@ -827,7 +884,9 @@ namespace ScreenCurtain
             _hotkeyRegistered = Native.RegisterHotKey(Handle, HotkeyId, spec.Modifiers, spec.VirtualKey);
             if (!_hotkeyRegistered)
             {
-                ShowNotice("全局热键 " + spec.Text + " 注册失败，可在设置中更换。", true);
+                ShowNotice(Localization.IsEnglish
+                    ? "Global hotkey " + spec.Text + " registration failed; change it in Settings."
+                    : "全局热键 " + spec.Text + " 注册失败，可在设置中更换。", true);
                 Log.Warn("注册全局热键失败：{0}，Win32={1}", spec.Text, Marshal.GetLastWin32Error());
             }
 

@@ -7,6 +7,7 @@ namespace ScreenCurtain
         Off,
         Starting,
         Active,
+        Paused,
         Degraded,
         Stopping
     }

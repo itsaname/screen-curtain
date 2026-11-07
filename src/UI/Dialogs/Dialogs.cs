@@ -40,14 +40,17 @@ namespace ScreenCurtain
                 body.SetBounds(22, 52, 416, 94);
                 form.Controls.Add(body);
 
-                Button cancel = UiLayout.SecondaryButton("取消");
-                cancel.SetBounds(250, 170, 90, 34);
+                Button cancel = UiLayout.SecondaryButton(Localization.T("取消"));
+                Button ok = UiLayout.PrimaryButton(confirmText);
+                if (danger) ok.BackColor = AppTheme.Danger;
+
+                int okWidth = Math.Max(90, TextRenderer.MeasureText(confirmText, ok.Font).Width + 28);
+                int cancelWidth = Math.Max(90, TextRenderer.MeasureText(cancel.Text, cancel.Font).Width + 28);
+                int right = form.ClientSize.Width - 22;
+                ok.SetBounds(right - okWidth, 170, okWidth, 34);
+                cancel.SetBounds(ok.Left - 8 - cancelWidth, 170, cancelWidth, 34);
                 cancel.DialogResult = DialogResult.Cancel;
                 form.Controls.Add(cancel);
-
-                Button ok = UiLayout.PrimaryButton(confirmText);
-                ok.SetBounds(348, 170, 90, 34);
-                if (danger) ok.BackColor = AppTheme.Danger;
                 ok.DialogResult = DialogResult.OK;
                 form.Controls.Add(ok);
 
@@ -67,6 +70,7 @@ namespace ScreenCurtain
         {
             Text = "更新设置恢复失败";
             Font = AppTheme.BodyFont;
+            message = Localization.T(message);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MinimizeBox = false;

@@ -1,7 +1,9 @@
+param([switch]$SkipUninstallerTest)
+
 $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$version = '1.2.0'
+$version = '1.3.0'
 $buildDir = Join-Path $root 'build'
 $distRoot = Join-Path $root ('dist\' + $version)
 $installerDir = Join-Path $distRoot 'installer'
@@ -100,9 +102,14 @@ Invoke-Exe $setup ("/SILENT /DIR=`"$testDir`" /NOARP /NOSHORTCUTS /NORUN") 20000
 $builtHash = (Get-FileHash -LiteralPath (Join-Path $buildDir 'ScreenCurtain.exe') -Algorithm SHA256).Hash
 $installedHash = (Get-FileHash -LiteralPath (Join-Path $testDir 'ScreenCurtain.exe') -Algorithm SHA256).Hash
 if ($builtHash -ne $installedHash) { throw 'Installed payload hash mismatch' }
-Invoke-Exe (Join-Path $testDir 'Uninstall.exe') '/SILENT' 15000
-Start-Sleep -Seconds 3
-if (Test-Path -LiteralPath $testDir) { throw 'Test uninstall did not remove the install directory' }
+if (-not $SkipUninstallerTest) {
+    Invoke-Exe (Join-Path $testDir 'Uninstall.exe') '/SILENT' 15000
+    Start-Sleep -Seconds 3
+    if (Test-Path -LiteralPath $testDir) { throw 'Test uninstall did not remove the install directory' }
+}
+else {
+    Write-Host 'Skipping uninstaller silent test (requested)'
+}
 
 Write-Host 'Writing release notes and checksums'
 $notes = @"
@@ -117,6 +124,10 @@ $notes = @"
 - Laptop backlight-only mode: external panels use DDC/CI luminance (VCP 0x10) set to 0; internal panels use WMI WmiSetBrightness(0) when available. The monitors remain powered, so their USB hubs and keyboard/mouse stay alive. Original luminance is restored on wake. No VCP 0xD6 power-mode command is sent.
 - Complete Windows 11 UI with Chinese/English localization. Auto follows the system language; a manual language selector is in Settings > General and takes effect after restart.
 - Setup and uninstaller are now bilingual too. They auto-select the system language; `/LANG=EN` forces English and `/LANG=ZH` forces Chinese.
+- Start with Windows uses the current-user Run key (no administrator rights); the path is refreshed when a portable build moves.
+- Update-guard start timing is selectable: at app startup (default) or blackout-only. Both request UAC only once at app startup; blackout-only starts the helper paused/restored, applies policies on blackout, pauses on wake, and never prompts again during the session.
+- Dark theme supports Auto/Light/Dark and a dark title bar; theme changes apply after restart.
+- English UI localization and layout fixes: all dark dropdowns select reliably, confirmation buttons auto-fit translated text, and translated help text no longer clips.
 - `Preview 3 seconds` now matches the real blackout: same DDC/WMI backlight dimming, audio mute, borderless black layers, DWM square corners and hidden cursor; all are restored after the preview.
 - Logging is asynchronous so a slow network/synced data folder cannot block the UI thread. Watchdog and unhandled failures write a detailed crash report to `%LOCALAPPDATA%\ScreenCurtain\logs\crash-*.log` (and best-effort to the portable data logs).
 - Audio restore now runs after display/overlay restore, verifies mute state, retries, and retries after session unlock.

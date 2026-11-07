@@ -10,6 +10,7 @@ namespace ScreenCurtain
         public static void Apply(Form form)
         {
             if (form == null || form.IsDisposed) return;
+            AppTheme.ApplyToForm(form);
             form.AutoScaleMode = AutoScaleMode.None;
             int dpi = 96;
             try
@@ -33,21 +34,153 @@ namespace ScreenCurtain
 
     internal static class AppTheme
     {
-        public static readonly Color WindowBackground = Color.FromArgb(243, 243, 243);
-        public static readonly Color Surface = Color.White;
-        public static readonly Color SurfaceMuted = Color.FromArgb(248, 248, 248);
-        public static readonly Color TextPrimary = Color.FromArgb(27, 27, 27);
-        public static readonly Color TextSecondary = Color.FromArgb(95, 95, 95);
-        public static readonly Color Border = Color.FromArgb(225, 225, 225);
-        public static readonly Color Accent = Color.FromArgb(15, 108, 189);
-        public static readonly Color AccentHover = Color.FromArgb(12, 88, 154);
-        public static readonly Color Success = Color.FromArgb(16, 124, 16);
-        public static readonly Color Warning = Color.FromArgb(157, 93, 0);
-        public static readonly Color Danger = Color.FromArgb(196, 43, 28);
-        public static readonly Color SuccessSoft = Color.FromArgb(232, 246, 232);
-        public static readonly Color WarningSoft = Color.FromArgb(255, 247, 230);
-        public static readonly Color DangerSoft = Color.FromArgb(253, 235, 233);
-        public static readonly Color NeutralSoft = Color.FromArgb(240, 240, 240);
+        private static bool _dark;
+
+        public static bool IsDark { get { return _dark; } }
+
+        public static Color WindowBackground
+        {
+            get { return _dark ? Color.FromArgb(31, 31, 31) : Color.FromArgb(243, 243, 243); }
+        }
+
+        public static Color Surface
+        {
+            get { return _dark ? Color.FromArgb(43, 43, 43) : Color.White; }
+        }
+
+        public static Color SurfaceMuted
+        {
+            get { return _dark ? Color.FromArgb(50, 50, 50) : Color.FromArgb(248, 248, 248); }
+        }
+
+        public static Color TextPrimary
+        {
+            get { return _dark ? Color.FromArgb(242, 242, 242) : Color.FromArgb(27, 27, 27); }
+        }
+
+        public static Color TextSecondary
+        {
+            get { return _dark ? Color.FromArgb(184, 184, 184) : Color.FromArgb(95, 95, 95); }
+        }
+
+        public static Color Border
+        {
+            get { return _dark ? Color.FromArgb(64, 64, 64) : Color.FromArgb(225, 225, 225); }
+        }
+
+        public static Color BorderStrong
+        {
+            get { return _dark ? Color.FromArgb(90, 90, 90) : Color.FromArgb(200, 200, 200); }
+        }
+
+        public static Color Accent
+        {
+            get { return _dark ? Color.FromArgb(76, 163, 224) : Color.FromArgb(15, 108, 189); }
+        }
+
+        public static Color AccentHover
+        {
+            get { return _dark ? Color.FromArgb(104, 181, 234) : Color.FromArgb(12, 88, 154); }
+        }
+
+        public static Color AccentSoft
+        {
+            get { return _dark ? Color.FromArgb(35, 61, 82) : Color.FromArgb(229, 241, 251); }
+        }
+
+        public static Color AccentBorder
+        {
+            get { return _dark ? Color.FromArgb(63, 110, 145) : Color.FromArgb(180, 215, 245); }
+        }
+
+        public static Color Success
+        {
+            get { return _dark ? Color.FromArgb(108, 203, 108) : Color.FromArgb(16, 124, 16); }
+        }
+
+        public static Color Warning
+        {
+            get { return _dark ? Color.FromArgb(224, 169, 74) : Color.FromArgb(157, 93, 0); }
+        }
+
+        public static Color Danger
+        {
+            get { return _dark ? Color.FromArgb(240, 106, 94) : Color.FromArgb(196, 43, 28); }
+        }
+
+        public static Color SuccessSoft
+        {
+            get { return _dark ? Color.FromArgb(32, 54, 36) : Color.FromArgb(232, 246, 232); }
+        }
+
+        public static Color WarningSoft
+        {
+            get { return _dark ? Color.FromArgb(58, 46, 30) : Color.FromArgb(255, 247, 230); }
+        }
+
+        public static Color DangerSoft
+        {
+            get { return _dark ? Color.FromArgb(58, 34, 32) : Color.FromArgb(253, 235, 233); }
+        }
+
+        public static Color NeutralSoft
+        {
+            get { return _dark ? Color.FromArgb(58, 58, 58) : Color.FromArgb(240, 240, 240); }
+        }
+
+        public static Color TextOnAccent
+        {
+            get { return Color.White; }
+        }
+
+        public static void SetTheme(string theme)
+        {
+            string code = (theme ?? "auto").Trim().ToLowerInvariant();
+            if (code == "dark")
+            {
+                _dark = true;
+            }
+            else if (code == "light")
+            {
+                _dark = false;
+            }
+            else
+            {
+                _dark = false;
+                try
+                {
+                    object value = Microsoft.Win32.Registry.GetValue(
+                        @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+                        "AppsUseLightTheme", 1);
+                    if (value is int) _dark = (int)value == 0;
+                }
+                catch
+                {
+                    _dark = false;
+                }
+            }
+        }
+
+        public static void ApplyToForm(Form form)
+        {
+            if (form == null || form.IsDisposed) return;
+            form.BackColor = WindowBackground;
+            try
+            {
+                if (form.IsHandleCreated)
+                {
+                    int dark = _dark ? 1 : 0;
+                    int result = Native.DwmSetWindowAttribute(form.Handle, 20, ref dark, sizeof(int));
+                    if (result != 0)
+                    {
+                        Native.DwmSetWindowAttribute(form.Handle, 19, ref dark, sizeof(int));
+                    }
+                }
+            }
+            catch
+            {
+            }
+        }
 
         public static readonly Font BodyFont = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
         public static readonly Font SmallFont = new Font("Microsoft YaHei UI", 8.5F, FontStyle.Regular, GraphicsUnit.Point);
@@ -87,6 +220,29 @@ namespace ScreenCurtain
             button.Font = BodyFont;
             button.Cursor = Cursors.Hand;
             button.Height = 28;
+        }
+
+        public static void ApplyNativeTheme(Control control)
+        {
+            if (control == null) return;
+            try
+            {
+                if (control.IsHandleCreated)
+                {
+                    Native.SetWindowTheme(control.Handle, IsDark ? "DarkMode_Explorer" : "Explorer", null);
+                }
+                else
+                {
+                    control.HandleCreated += delegate
+                    {
+                        try { Native.SetWindowTheme(control.Handle, IsDark ? "DarkMode_Explorer" : "Explorer", null); }
+                        catch { }
+                    };
+                }
+            }
+            catch
+            {
+            }
         }
 
         public static Label CreateLabel(string text, Font font, Color color)
@@ -262,7 +418,7 @@ namespace ScreenCurtain
                 e.Graphics.FillRectangle(outside, ClientRectangle);
             }
             bool on = Checked;
-            Color track = on ? AppTheme.Accent : Color.FromArgb(200, 200, 200);
+            Color track = on ? AppTheme.Accent : AppTheme.BorderStrong;
             Rectangle trackRect = new Rectangle(0, 2, Width - 1, Height - 5);
             using (GraphicsPath path = RoundedRect(trackRect, (Height - 5) / 2))
             using (SolidBrush brush = new SolidBrush(track))
@@ -302,7 +458,9 @@ namespace ScreenCurtain
             Cursor = Cursors.Hand;
             TextAlign = HorizontalAlignment.Center;
             Font = new Font(AppTheme.BodyFont.FontFamily, 10F, FontStyle.Bold);
-            BackColor = Color.White;
+            BackColor = AppTheme.Surface;
+            ForeColor = AppTheme.TextPrimary;
+            AppTheme.ApplyNativeTheme(this);
         }
 
         public HotkeySpec Spec
@@ -379,21 +537,130 @@ namespace ScreenCurtain
             if (_recording) return;
             _recording = true;
             Text = "请按下组合键…";
-            BackColor = Color.FromArgb(235, 245, 255);
+            BackColor = AppTheme.AccentSoft;
             SelectAll();
         }
 
         private void EndCapture()
         {
             _recording = false;
-            BackColor = Color.White;
+            BackColor = AppTheme.Surface;
             if (_spec != null) Text = _spec.Text;
         }
     }
 
-    internal static class UiLayout
+    internal sealed class DarkSelect : Button
     {
-        public static Button PrimaryButton(string text)
+        private readonly string[] _items;
+        private int _selectedIndex;
+        private ContextMenuStrip _menu;
+
+        public event EventHandler SelectionChanged;
+
+        public DarkSelect(string[] items, int selectedIndex)
+        {
+            _items = items ?? new string[0];
+            _selectedIndex = Math.Max(0, Math.Min(_items.Length - 1, selectedIndex));
+            AppTheme.StyleSecondary(this);
+            TextAlign = ContentAlignment.MiddleLeft;
+            FlatAppearance.BorderColor = AppTheme.BorderStrong;
+            Height = 30;
+            UpdateText();
+            Click += delegate { ShowMenu(); };
+        }
+
+        public int SelectedIndex
+        {
+            get { return _selectedIndex; }
+            set
+            {
+                int next = Math.Max(0, Math.Min(_items.Length - 1, value));
+                if (next == _selectedIndex) return;
+                _selectedIndex = next;
+                UpdateText();
+                EventHandler handler = SelectionChanged;
+                if (handler != null) handler(this, EventArgs.Empty);
+            }
+        }
+
+        private void UpdateText()
+        {
+            Text = (_items.Length == 0 ? string.Empty : _items[_selectedIndex]) + "    ▾";
+        }
+
+        private void ShowMenu()
+        {
+            if (_menu != null)
+            {
+                try { _menu.Dispose(); } catch { }
+                _menu = null;
+            }
+            _menu = new ContextMenuStrip();
+            _menu.ShowImageMargin = false;
+            _menu.BackColor = AppTheme.Surface;
+            _menu.ForeColor = AppTheme.TextPrimary;
+            _menu.Renderer = new DarkMenuRenderer();
+            for (int i = 0; i < _items.Length; i++)
+            {
+                int index = i;
+                ToolStripMenuItem item = new ToolStripMenuItem(_items[i]);
+                item.ForeColor = AppTheme.TextPrimary;
+                item.BackColor = AppTheme.Surface;
+                item.Click += delegate { SelectedIndex = index; };
+                _menu.Items.Add(item);
+            }
+            _menu.Show(this, new Point(0, Height));
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && _menu != null)
+            {
+                try { _menu.Dispose(); } catch { }
+                _menu = null;
+            }
+            base.Dispose(disposing);
+        }
+    }
+
+    internal sealed class DarkMenuRenderer : ToolStripRenderer
+    {
+        protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
+        {
+            using (SolidBrush brush = new SolidBrush(AppTheme.Surface))
+            {
+                e.Graphics.FillRectangle(brush, e.AffectedBounds);
+            }
+        }
+
+        protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+        {
+            bool selected = (e.Item.Selected || e.Item.Pressed);
+            Color color = selected ? AppTheme.AccentSoft : AppTheme.Surface;
+            using (SolidBrush brush = new SolidBrush(color))
+            {
+                e.Graphics.FillRectangle(brush, new Rectangle(Point.Empty, e.Item.Size));
+            }
+        }
+
+        protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
+        {
+            e.TextColor = e.Item.Enabled ? AppTheme.TextPrimary : AppTheme.TextSecondary;
+            base.OnRenderItemText(e);
+        }
+
+        protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)
+        {
+            using (Pen pen = new Pen(AppTheme.Border))
+            {
+                int y = e.Item.Height / 2;
+                e.Graphics.DrawLine(pen, 6, y, e.Item.Width - 6, y);
+            }
+        }
+    }
+
+    internal static class UiLayout
+    {        public static Button PrimaryButton(string text)
         {
             Button button = new Button();
             button.Text = text;

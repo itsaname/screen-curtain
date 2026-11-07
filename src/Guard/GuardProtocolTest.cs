@@ -80,6 +80,22 @@ namespace ScreenCurtain
                     throw new InvalidOperationException("辅助进程未进入 ACTIVE");
                 }
 
+                writer.WriteLine(PipeProtocol.Pause);
+                string paused = reader.ReadLine();
+                result.AppendLine("PAUSE: " + OneLine(paused));
+                if (paused == null || !paused.StartsWith(PipeProtocol.Paused, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException("辅助进程未确认暂停");
+                }
+
+                writer.WriteLine(PipeProtocol.Resume);
+                string resumed = reader.ReadLine();
+                result.AppendLine("RESUME: " + OneLine(resumed));
+                if (resumed == null || !resumed.StartsWith(PipeProtocol.Active, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException("辅助进程未确认恢复保护");
+                }
+
                 writer.WriteLine(PipeProtocol.Restore);
                 string restored = reader.ReadLine();
                 result.AppendLine("RESTORE: " + OneLine(restored));

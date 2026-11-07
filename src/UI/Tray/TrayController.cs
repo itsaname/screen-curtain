@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -196,6 +196,11 @@ namespace ScreenCurtain
                 text = "更新重启保护：已开启";
                 icon = _activeIcon;
             }
+            else if (state == GuardState.Paused)
+            {
+                text = "更新重启保护：仅熄屏期间";
+                icon = _activeIcon;
+            }
             else if (state == GuardState.Degraded)
             {
                 text = "更新重启保护：降级";
@@ -253,6 +258,7 @@ namespace ScreenCurtain
             switch (state)
             {
                 case GuardState.Active: return Localization.T("保护已开启");
+                case GuardState.Paused: return Localization.T("保护待命");
                 case GuardState.Degraded: return Localization.T("保护降级");
                 case GuardState.Starting: return Localization.T("保护启动中");
                 case GuardState.Stopping: return Localization.T("保护停止中");

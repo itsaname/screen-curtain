@@ -75,12 +75,12 @@ namespace ScreenCurtain
             Controls.Add(_backButton);
 
             _nextButton = UiLayout.PrimaryButton("继续");
-            _nextButton.SetBounds(550, 468, 106, 40);
+            _nextButton.SetBounds(476, 468, 180, 40);
             _nextButton.Click += delegate { GoNext(); };
             Controls.Add(_nextButton);
 
             Label footer = AppTheme.CreateLabel("设置可以随时在“设置”中修改。", AppTheme.SmallFont, AppTheme.TextSecondary);
-            footer.SetBounds(132, 476, 380, 22);
+            footer.SetBounds(132, 476, 330, 22);
             Controls.Add(footer);
 
             FormClosing += OnFormClosing;
@@ -165,6 +165,7 @@ namespace ScreenCurtain
             _enableGuard = new RadioButton();
             _enableGuard.Text = "启用更新重启保护（推荐）";
             _enableGuard.Font = new Font(AppTheme.BodyFont, FontStyle.Bold);
+            _enableGuard.ForeColor = AppTheme.TextPrimary;
             _enableGuard.BackColor = Color.Transparent;
             _enableGuard.SetBounds(28, 76, 430, 26);
             _card.Controls.Add(_enableGuard);
@@ -174,6 +175,7 @@ namespace ScreenCurtain
             _screenOnly = new RadioButton();
             _screenOnly.Text = "仅使用熄屏，不修改系统更新设置";
             _screenOnly.Font = AppTheme.BodyFont;
+            _screenOnly.ForeColor = AppTheme.TextPrimary;
             _screenOnly.BackColor = Color.Transparent;
             _screenOnly.SetBounds(28, 170, 430, 26);
             _card.Controls.Add(_screenOnly);
@@ -209,9 +211,9 @@ namespace ScreenCurtain
             _screenOnly.CheckedChanged += delegate { UpdateStepTwoButtons(); };
             if (_guard.State == GuardState.Active)
             {
-                _guardStatus.Text = "更新保护已经开启";
+                _guardStatus.Text = Localization.T("更新保护已经开启");
                 _enableGuard.Checked = true;
-                _nextButton.Text = "继续";
+                _nextButton.Text = Localization.T("继续");
             }
             UpdateStepTwoButtons();
         }
@@ -328,13 +330,13 @@ namespace ScreenCurtain
                 catch { }
                 _startingGuard = true;
                 _nextButton.Enabled = false;
-                _nextButton.Text = "正在请求权限…";
+                _nextButton.Text = Localization.T("正在请求权限…");
                 _error.Text = string.Empty;
-                _guardStatus.Text = "正在请求管理员权限，请稍候…";
+                _guardStatus.Text = Localization.T("正在请求管理员权限，请稍候…");
                 if (!_guard.Start())
                 {
                     _startingGuard = false;
-                    _error.Text = "无法启动更新保护。可以重试，或仅使用熄屏继续。";
+                    _error.Text = Localization.T("无法启动更新保护。可以重试，或仅使用熄屏继续。");
                     _skipGuard.Visible = true;
                     UpdateStepTwoButtons();
                 }
@@ -378,10 +380,10 @@ namespace ScreenCurtain
             if (_guardStatus != null)
             {
                 _guardStatus.Text = e.State == GuardState.Active
-                    ? "更新保护已开启。点击继续完成向导。"
+                    ? Localization.T("更新保护已开启。点击继续完成向导。")
                     : e.State == GuardState.Degraded
-                        ? "保护未开启：" + e.Message
-                        : e.Message;
+                        ? Localization.T("保护未开启：") + Localization.T(e.Message)
+                        : Localization.T(e.Message);
             }
 
             if (!_startingGuard) return;
@@ -397,11 +399,11 @@ namespace ScreenCurtain
             {
                 _startingGuard = false;
                 _error.Text = e.State == GuardState.Degraded
-                    ? "管理员权限请求已取消，或其他程序阻止了更新保护。"
-                    : "更新保护未能启动。";
+                    ? Localization.T("管理员权限请求已取消，或其他程序阻止了更新保护。")
+                    : Localization.T("更新保护未能启动。");
                 _skipGuard.Visible = true;
                 _nextButton.Enabled = true;
-                _nextButton.Text = "重试";
+                _nextButton.Text = Localization.T("重试");
             }
         }
 
