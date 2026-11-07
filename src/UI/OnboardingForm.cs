@@ -134,7 +134,7 @@ namespace ScreenCurtain
             _backButton.Visible = step > 1;
             _nextButton.Enabled = true;
             _nextButton.Text = Localization.IsEnglish
-                ? (step == 1 ? "Continue" : step == 2 && _enableGuard != null && _enableGuard.Checked ? "Enable and continue" : step == 3 ? "Done" : "Continue with blackout only")
+                ? (step == 1 ? "Continue" : step == 2 && _enableGuard != null && _enableGuard.Checked ? "Enable and continue" : step == 3 ? "Done" : "Blackout only")
                 : (step == 1 ? "继续" : step == 2 && _enableGuard != null && _enableGuard.Checked ? "启用并继续" : step == 3 ? "完成" : "仅熄屏继续");
 
             if (step == 1) BuildStepOne();
@@ -222,7 +222,7 @@ namespace ScreenCurtain
             _nextButton.Text = Localization.IsEnglish
                 ? (_enableGuard != null && _enableGuard.Checked
                     ? (_guard.State == GuardState.Degraded ? "Retry" : "Enable and continue")
-                    : "Continue with blackout only")
+                    : "Blackout only")
                 : (_enableGuard != null && _enableGuard.Checked
                     ? (_guard.State == GuardState.Degraded ? "重试" : "启用并继续")
                     : "仅熄屏继续");
