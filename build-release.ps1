@@ -3,7 +3,7 @@ param([switch]$SkipUninstallerTest)
 $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$version = '1.3.0'
+$version = '1.3.1'
 $buildDir = Join-Path $root 'build'
 $distRoot = Join-Path $root ('dist\' + $version)
 $installerDir = Join-Path $distRoot 'installer'
@@ -128,6 +128,7 @@ $notes = @"
 - Update-guard start timing is selectable: at app startup (default) or blackout-only. Both request UAC only once at app startup; blackout-only starts the helper paused/restored, applies policies on blackout, pauses on wake, and never prompts again during the session.
 - Dark theme supports Auto/Light/Dark and a dark title bar; theme changes apply after restart.
 - English UI localization and layout fixes: all dark dropdowns select reliably, confirmation buttons auto-fit translated text, and translated help text no longer clips.
+- Sleep protection now uses a system PowerRequest in addition to SetThreadExecutionState, blocking automatic sleep/hibernate while dark; resume restores the display and watchdog ignores suspend/resume gaps.
 - `Preview 3 seconds` now matches the real blackout: same DDC/WMI backlight dimming, audio mute, borderless black layers, DWM square corners and hidden cursor; all are restored after the preview.
 - Logging is asynchronous so a slow network/synced data folder cannot block the UI thread. Watchdog and unhandled failures write a detailed crash report to `%LOCALAPPDATA%\ScreenCurtain\logs\crash-*.log` (and best-effort to the portable data logs).
 - Audio restore now runs after display/overlay restore, verifies mute state, retries, and retries after session unlock.

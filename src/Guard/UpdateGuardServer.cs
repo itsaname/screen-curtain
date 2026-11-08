@@ -12,6 +12,7 @@ namespace ScreenCurtain
         private static readonly object WriteSync = new object();
         private static bool _restored;
         private static volatile bool _paused;
+        private static int _parentExitReported;
         private static int _healthFailures;
         private static PolicySnapshot _snapshot;
         private static StreamReader _reader;
@@ -39,7 +40,10 @@ namespace ScreenCurtain
                 return;
             }
 
-            IntPtr parentHandle = Native.OpenProcess(Native.PROCESS_SYNCHRONIZE, false, parentPid);
+            IntPtr parentHandle = Native.OpenProcess(
+                Native.PROCESS_SYNCHRONIZE | Native.PROCESS_QUERY_LIMITED_INFORMATION,
+                false,
+                parentPid);
             if (parentHandle == IntPtr.Zero)
             {
                 // The pipe itself is also a parent lifetime signal. Keep working
@@ -78,7 +82,7 @@ namespace ScreenCurtain
                         uint wait = Native.WaitForSingleObject(parentHandle, 0xFFFFFFFF);
                         if (wait == Native.WAIT_OBJECT_0)
                         {
-                            RestoreAndExit("父进程已退出", false);
+                            RestoreAndExit("父进程已退出（" + ParentExitDetail(parentHandle, parentPid) + "）", false);
                         }
                     });
                     parentWatch.IsBackground = true;
@@ -145,7 +149,7 @@ namespace ScreenCurtain
 
                     if (line == null)
                     {
-                        RestoreAndExit("管道关闭", false);
+                        RestoreAndExit("管道关闭（" + ParentExitDetail(parentHandle, parentPid) + "）", false);
                         return;
                     }
 
@@ -265,6 +269,27 @@ namespace ScreenCurtain
             {
                 Log.Exception("策略健康检查异常", ex);
             }
+        }
+
+        private static string ParentExitDetail(IntPtr parentHandle, int parentPid)
+        {
+            if (Interlocked.Exchange(ref _parentExitReported, 1) != 0)
+            {
+                return "exit already reported";
+            }
+
+            uint code = 0;
+            bool hasCode = parentHandle != IntPtr.Zero &&
+                Native.GetExitCodeProcess(parentHandle, out code);
+            string detail = string.Format(
+                "Parent process exited.\r\nPID: {0}\r\nExit code: {1}\r\nExit code (hex): 0x{2:X8}\r\n",
+                parentPid,
+                hasCode ? code.ToString() : "unknown",
+                hasCode ? code : 0);
+            Log.Warn("update-guard 检测到父进程退出：PID={0}, ExitCode={1} (0x{2:X8})",
+                parentPid, hasCode ? code.ToString() : "unknown", hasCode ? code : 0);
+            try { CrashLog.Write("parent-exit", detail); } catch { }
+            return hasCode ? "ExitCode=0x" + code.ToString("X8") : "ExitCode=unknown";
         }
 
         private static void RestoreAndExit(string reason, bool notify)

@@ -183,6 +183,10 @@ namespace ScreenCurtain
                 {
                     Log.Warn("SetThreadExecutionState 失败，Win32={0}", Marshal.GetLastWin32Error());
                 }
+                if (_settings.PreventSleep)
+                {
+                    SleepGuard.Acquire();
+                }
                 _lastExecutionStateRefreshUtc = DateTime.UtcNow;
 
                 _topmostGuard.Start(GetOverlayHandles());
@@ -211,6 +215,7 @@ namespace ScreenCurtain
                     _backlightStates.Clear();
                 }
                 Native.SetThreadExecutionState(Native.ES_CONTINUOUS);
+                SleepGuard.Release();
                 lock (_sync)
                 {
                     _overlays.Clear();
@@ -271,6 +276,7 @@ namespace ScreenCurtain
             {
                 Log.Warn("清除 SetThreadExecutionState 失败，Win32={0}", Marshal.GetLastWin32Error());
             }
+            SleepGuard.Release();
 
             List<OverlayForm> toClose;
             lock (_sync)
@@ -446,9 +452,17 @@ namespace ScreenCurtain
             {
                 SafeRestore("系统挂起");
             }
-            else if (wParam == Native.PBT_APMRESUMEAUTOMATIC)
+            else if (wParam == Native.PBT_APMRESUMEAUTOMATIC ||
+                     wParam == Native.PBT_APMRESUMESUSPEND)
             {
                 Interlocked.Exchange(ref _heartbeatTicks, DateTime.UtcNow.Ticks);
+                if (State != BlackoutState.Idle)
+                {
+                    // A suspend can leave the blackout active (especially on
+                    // Modern Standby). Do not make the user wake into a black
+                    // screen that only the watchdog can clear.
+                    SafeRestore("系统恢复");
+                }
                 try { _audio.RetryPendingRestore(); } catch (Exception ex) { Log.Exception("系统恢复后恢复音频失败", ex); }
             }
         }
@@ -585,6 +599,7 @@ namespace ScreenCurtain
             {
                 Log.Warn("刷新 SetThreadExecutionState 失败，Win32={0}", Marshal.GetLastWin32Error());
             }
+            SleepGuard.Acquire();
             _lastExecutionStateRefreshUtc = DateTime.UtcNow;
         }
 
@@ -944,11 +959,41 @@ namespace ScreenCurtain
 
         private void WatchdogLoop()
         {
+            DateTime lastCheck = DateTime.UtcNow;
             while (!_watchdogStop)
             {
                 try
                 {
                     Thread.Sleep(1000);
+                    DateTime now = DateTime.UtcNow;
+                    double watchdogGap = (now - lastCheck).TotalSeconds;
+                    lastCheck = now;
+
+                    // Thread.Sleep is suspended while Windows sleeps/hibernates.
+                    // After resume the UI timer also needs a moment to restart;
+                    // without this guard the watchdog would immediately kill a
+                    // perfectly healthy app that was merely suspended overnight.
+                    if (watchdogGap > 5)
+                    {
+                        Interlocked.Exchange(ref _heartbeatTicks, now.Ticks);
+                        Log.Warn("看门狗检测到系统休眠/长时间暂停 {0:0.0} 秒，已重置心跳", watchdogGap);
+                        if (State != BlackoutState.Idle)
+                        {
+                            try
+                            {
+                                _dispatcher.BeginInvoke(new Action(delegate
+                                {
+                                    try { SafeRestore("系统恢复（看门狗）"); }
+                                    catch (Exception ex) { Log.Exception("系统恢复后解除熄屏失败", ex); }
+                                }));
+                            }
+                            catch
+                            {
+                            }
+                        }
+                        continue;
+                    }
+
                     BlackoutState state = State;
                     if (state == BlackoutState.Idle)
                     {

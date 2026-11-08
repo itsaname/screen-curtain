@@ -71,7 +71,7 @@ namespace ScreenCurtain.Setup
     {
         public const string ProductName = "幕帘 ScreenCurtain";
         public const string ShortName = "幕帘";
-        public const string Version = "1.3.0";
+        public const string Version = "1.3.1";
         public const string AppExe = "ScreenCurtain.exe";
         public const string AppConfig = "ScreenCurtain.exe.config";
         public const string UninstallerExe = "Uninstall.exe";

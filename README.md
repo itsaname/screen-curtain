@@ -2,7 +2,7 @@
 
 ScreenCurtain 是一个面向 Windows 11 的熄屏工具。它会把所有显示器盖上一层无边框纯黑画面，并在支持的情况下只关闭屏幕背光，让显示器、USB Hub 和接在 Hub 上的键鼠继续工作。鼠标移动不会退出，点击鼠标或按键即可恢复。
 
-当前版本：**1.3.0**。应用界面、安装器和卸载器都支持中文/English。
+当前版本：**1.3.1**。应用界面、安装器和卸载器都支持中文/English。
 
 **English:** ScreenCurtain is a Windows 11 blackout tool. It covers every display with a borderless black layer and turns off only the panel backlight where supported, keeping monitors and their USB hubs powered. Move the mouse freely; a click or keypress restores the desktop. The app, installer and uninstaller are bilingual.
 
@@ -10,9 +10,9 @@ ScreenCurtain 是一个面向 Windows 11 的熄屏工具。它会把所有显示
 
 | 版本 | 说明 |
 | --- | --- |
-| [安装版](https://github.com/itsaname/screen-curtain/releases/download/v1.3.0/ScreenCurtain-Setup-1.3.0.exe) | 按用户安装，不需要管理员权限 |
-| [绿色版](https://github.com/itsaname/screen-curtain/releases/download/v1.3.0/ScreenCurtain-1.3.0-portable.zip) | 解压即用，配置和日志保存在同目录 `data\` |
-| [SHA256SUMS](https://github.com/itsaname/screen-curtain/releases/download/v1.3.0/SHA256SUMS.txt) | 下载后校验文件完整性 |
+| [安装版](https://github.com/itsaname/screen-curtain/releases/download/v1.3.1/ScreenCurtain-Setup-1.3.1.exe) | 按用户安装，不需要管理员权限 |
+| [绿色版](https://github.com/itsaname/screen-curtain/releases/download/v1.3.1/ScreenCurtain-1.3.1-portable.zip) | 解压即用，配置和日志保存在同目录 `data\` |
+| [SHA256SUMS](https://github.com/itsaname/screen-curtain/releases/download/v1.3.1/SHA256SUMS.txt) | 下载后校验文件完整性 |
 
 也可以直接从 [GitHub Releases](https://github.com/itsaname/screen-curtain/releases/latest) 获取最新版本。
 
@@ -108,7 +108,7 @@ Windows 设置里可能临时出现“部分设置由组织管理”，这是临
 - 是否尝试物理关屏；
 - 笔记本上的物理关屏（默认关闭）；
 - 外接屏/内置屏仅关背光（默认开启）；
-- 保持系统唤醒、滚轮恢复、恢复前台窗口；
+- 保持系统唤醒（执行状态 + PowerRequest 阻止自动睡眠/休眠；不覆盖合盖、电源键或主动休眠）、滚轮恢复、恢复前台窗口；
 - 熄屏时静音系统音频；
 - 更新保护开关和启动时自动尝试；
 - 诊断信息、日志目录和重置设置。
@@ -179,7 +179,7 @@ ScreenCurtain.exe --repair-update       # 提权恢复遗留更新策略
 
 - [设计约束与实现方案](docs/design.md)
 - [完整 UI/UX 设计规范](docs/ui-design.md)
-- [1.3.0 发布说明](dist/1.3.0/RELEASE-NOTES.md)
+- [1.3.1 发布说明](dist/1.3.1/RELEASE-NOTES.md)
 
 ## 隐私
 

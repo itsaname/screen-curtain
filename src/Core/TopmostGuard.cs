@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace ScreenCurtain
@@ -36,17 +37,16 @@ namespace ScreenCurtain
         private static extern bool UnhookWinEvent(IntPtr hWinEventHook);
 
         private readonly List<IntPtr> _targets = new List<IntPtr>();
-        private readonly System.Windows.Forms.Timer _timer;
+        private readonly System.Threading.Timer _timer;
         private WinEventDelegate _delegate;
         private IntPtr _foregroundHook;
         private IntPtr _showHook;
-        private bool _active;
+        private volatile bool _active;
+        private int _refreshing;
 
         public TopmostGuard()
         {
-            _timer = new System.Windows.Forms.Timer();
-            _timer.Interval = 150;
-            _timer.Tick += delegate { EnsureTopmost(); };
+            _timer = new System.Threading.Timer(Tick, null, Timeout.Infinite, Timeout.Infinite);
         }
 
         public void Start(List<IntPtr> targets)
@@ -71,8 +71,7 @@ namespace ScreenCurtain
                 0,
                 0,
                 WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);
-            EnsureTopmost();
-            _timer.Start();
+            _timer.Change(0, 300);
         }
 
         public void SetTargets(List<IntPtr> targets)
@@ -93,7 +92,7 @@ namespace ScreenCurtain
         public void Stop()
         {
             _active = false;
-            try { _timer.Stop(); } catch { }
+            try { _timer.Change(Timeout.Infinite, Timeout.Infinite); } catch { }
             try
             {
                 if (_foregroundHook != IntPtr.Zero) UnhookWinEvent(_foregroundHook);
@@ -115,44 +114,55 @@ namespace ScreenCurtain
             try { _timer.Dispose(); } catch { }
         }
 
+        private void Tick(object state)
+        {
+            try { EnsureTopmost(); } catch { }
+        }
+
         private void OnWinEvent(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
         {
             if (!_active) return;
-            try
+            // Never run SetWindowPos on the UI thread from a WinEvent callback.
+            // A stalled display driver can otherwise freeze the UI heartbeat.
+            ThreadPool.QueueUserWorkItem(delegate
             {
-                EnsureTopmost();
-            }
-            catch (Exception ex)
-            {
-                Log.Exception("TopmostGuard 窗口事件处理失败", ex);
-            }
+                try { EnsureTopmost(); } catch { }
+            });
         }
 
         private void EnsureTopmost()
         {
             if (!_active) return;
-            List<IntPtr> targets;
-            lock (_targets)
+            if (Interlocked.Exchange(ref _refreshing, 1) != 0) return;
+            try
             {
-                targets = new List<IntPtr>(_targets);
+                List<IntPtr> targets;
+                lock (_targets)
+                {
+                    targets = new List<IntPtr>(_targets);
+                }
+                for (int i = 0; i < targets.Count; i++)
+                {
+                    try
+                    {
+                        if (targets[i] == IntPtr.Zero) continue;
+                        Native.SetWindowPos(
+                            targets[i],
+                            Native.HWND_TOPMOST,
+                            0,
+                            0,
+                            0,
+                            0,
+                            Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE | Native.SWP_SHOWWINDOW | Native.SWP_ASYNCWINDOWPOS);
+                    }
+                    catch
+                    {
+                    }
+                }
             }
-            for (int i = 0; i < targets.Count; i++)
+            finally
             {
-                try
-                {
-                    if (targets[i] == IntPtr.Zero) continue;
-                    Native.SetWindowPos(
-                        targets[i],
-                        Native.HWND_TOPMOST,
-                        0,
-                        0,
-                        0,
-                        0,
-                        Native.SWP_NOMOVE | Native.SWP_NOSIZE | Native.SWP_NOACTIVATE | Native.SWP_SHOWWINDOW);
-                }
-                catch
-                {
-                }
+                Interlocked.Exchange(ref _refreshing, 0);
             }
         }
     }

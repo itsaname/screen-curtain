@@ -45,6 +45,7 @@ namespace ScreenCurtain
         public const int WM_MOUSEHWHEEL = 0x020E;
 
         public const int PBT_APMSUSPEND = 0x0004;
+        public const int PBT_APMRESUMESUSPEND = 0x0007;
         public const int PBT_APMRESUMEAUTOMATIC = 0x0012;
 
         public const int WTS_CONSOLE_CONNECT = 0x1;
@@ -70,6 +71,7 @@ namespace ScreenCurtain
         public const uint SWP_NOMOVE = 0x0002;
         public const uint SWP_NOACTIVATE = 0x0010;
         public const uint SWP_SHOWWINDOW = 0x0040;
+        public const uint SWP_ASYNCWINDOWPOS = 0x4000;
 
         public const int GWL_EXSTYLE = -20;
         public const int WS_EX_TOOLWINDOW = 0x00000080;
@@ -79,6 +81,7 @@ namespace ScreenCurtain
         public const int DWMWCP_DONOTROUND = 1;
 
         public const uint PROCESS_SYNCHRONIZE = 0x00100000;
+        public const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x00001000;
         public const uint WAIT_OBJECT_0 = 0x00000000;
         public const uint WAIT_TIMEOUT = 0x00000102;
 
@@ -133,6 +136,25 @@ namespace ScreenCurtain
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern uint SetThreadExecutionState(uint esFlags);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr PowerCreateRequest(ref REASON_CONTEXT context);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool PowerSetRequest(IntPtr powerRequest, int requestType);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool PowerClearRequest(IntPtr powerRequest, int requestType);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct REASON_CONTEXT
+        {
+            public uint Version;
+            public uint Flags;
+            public IntPtr Reason;
+        }
 
         public delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);
 
@@ -281,6 +303,9 @@ namespace ScreenCurtain
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern IntPtr OpenProcess(uint dwDesiredAccess, [MarshalAs(UnmanagedType.Bool)] bool bInheritHandle, int dwProcessId);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool GetExitCodeProcess(IntPtr hProcess, out uint lpExitCode);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);

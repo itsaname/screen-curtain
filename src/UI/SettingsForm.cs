@@ -283,7 +283,7 @@ namespace ScreenCurtain
                 ? "当前检测到电池：默认不会发送物理关屏，避免笔记本内置屏背光反复和唤醒锁屏。"
                 : "当前未检测到电池：物理关屏按“尝试物理关闭显示器”设置执行。", ref y);
             AddInfo("如果系统启用了“唤醒时要求登录”或强制空闲锁定策略，黑屏结束后可能仍需登录；这是 Windows 安全策略，本程序不会尝试绕过。", ref y);
-            AddToggle("保持系统唤醒", "熄屏期间阻止系统自动睡眠；不会阻止系统关机。", ref y, _settings.PreventSleep, delegate(bool value)
+            AddToggle("保持系统唤醒", "熄屏期间通过执行状态和系统 PowerRequest 阻止自动睡眠/休眠；不能覆盖合盖、电源键或用户主动休眠。", ref y, _settings.PreventSleep, delegate(bool value)
             {
                 _settings.PreventSleep = value;
                 _settings.Save();
