@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using Microsoft.Win32;
 
@@ -23,6 +24,7 @@ namespace ScreenCurtain
 
         public bool KeyExisted;
         public int ParentPid;
+        public int SessionId;
         public string CreatedAtUtc;
         public string AppVersion;
         public Dictionary<string, PolicyValueSnapshot> Values = new Dictionary<string, PolicyValueSnapshot>(StringComparer.OrdinalIgnoreCase);
@@ -32,6 +34,7 @@ namespace ScreenCurtain
             IPolicyStore store = PolicyRegistry.Store;
             PolicySnapshot snapshot = new PolicySnapshot();
             snapshot.ParentPid = parentPid;
+            try { snapshot.SessionId = Process.GetCurrentProcess().SessionId; } catch { snapshot.SessionId = 0; }
             snapshot.CreatedAtUtc = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
             snapshot.AppVersion = "1.0.0.0";
             snapshot.KeyExisted = store.KeyExists(PolicyRegistry.PolicyKeyPath);
@@ -69,6 +72,7 @@ namespace ScreenCurtain
 
             store.SetValue(PolicyRegistry.BackupKeyPath, "KeyExisted", KeyExisted ? 1 : 0, RegistryValueKind.DWord);
             store.SetValue(PolicyRegistry.BackupKeyPath, "ParentPid", ParentPid, RegistryValueKind.DWord);
+            store.SetValue(PolicyRegistry.BackupKeyPath, "SessionId", SessionId, RegistryValueKind.DWord);
             store.SetValue(PolicyRegistry.BackupKeyPath, "CreatedAtUtc", CreatedAtUtc ?? string.Empty, RegistryValueKind.String);
             store.SetValue(PolicyRegistry.BackupKeyPath, "AppVersion", AppVersion ?? string.Empty, RegistryValueKind.String);
 
@@ -94,6 +98,7 @@ namespace ScreenCurtain
             PolicySnapshot snapshot = new PolicySnapshot();
             snapshot.KeyExisted = ReadInt(store, PolicyRegistry.BackupKeyPath, "KeyExisted", 0) != 0;
             snapshot.ParentPid = ReadInt(store, PolicyRegistry.BackupKeyPath, "ParentPid", 0);
+            snapshot.SessionId = ReadInt(store, PolicyRegistry.BackupKeyPath, "SessionId", 0);
             snapshot.CreatedAtUtc = ReadString(store, PolicyRegistry.BackupKeyPath, "CreatedAtUtc");
             snapshot.AppVersion = ReadString(store, PolicyRegistry.BackupKeyPath, "AppVersion");
 

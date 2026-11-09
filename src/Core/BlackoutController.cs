@@ -148,6 +148,7 @@ namespace ScreenCurtain
                 _backlightStates = DdcBacklight.DimExternal();
                 Log.Info("外接屏背光关闭：{0} 台（显示器保持供电/输入可用）", _backlightStates.Count);
             }
+            TouchHeartbeat();
 
             List<OverlayForm> created = new List<OverlayForm>();
             try
@@ -160,6 +161,7 @@ namespace ScreenCurtain
                 }
 
                 Native.DwmFlush();
+                TouchHeartbeat();
 
                 lock (_sync)
                 {
@@ -188,11 +190,13 @@ namespace ScreenCurtain
                     SleepGuard.Acquire();
                 }
                 _lastExecutionStateRefreshUtc = DateTime.UtcNow;
+                TouchHeartbeat();
 
                 _topmostGuard.Start(GetOverlayHandles());
                 _audio.MuteForBlackout();
                 InstallHooks();
                 FocusPrimaryOverlay();
+                TouchHeartbeat();
                 _timer.Start();
                 RaiseState(BlackoutState.Arming);
                 Log.Info("进入熄屏准备：{0} 台显示器，PreventSleep={1}", created.Count, _settings.PreventSleep);
@@ -603,6 +607,31 @@ namespace ScreenCurtain
             _lastExecutionStateRefreshUtc = DateTime.UtcNow;
         }
 
+        private void TouchHeartbeat()
+        {
+            Interlocked.Exchange(ref _heartbeatTicks, DateTime.UtcNow.Ticks);
+        }
+
+        private void EmergencyRestoreBacklight()
+        {
+            try
+            {
+                Thread worker = new Thread(delegate()
+                {
+                    try { DdcBacklight.RecoverStaleState(); }
+                    catch (Exception ex) { Log.Exception("看门狗恢复背光失败", ex); }
+                });
+                worker.IsBackground = true;
+                worker.Name = "ScreenCurtain.EmergencyBacklight";
+                worker.Start();
+                worker.Join(2500);
+            }
+            catch (Exception ex)
+            {
+                Log.Exception("启动看门狗背光恢复失败", ex);
+            }
+        }
+
         private void NoteArmingActivity()
         {
             lock (_sync)
@@ -1001,15 +1030,18 @@ namespace ScreenCurtain
                     }
 
                     long ticks = Interlocked.Read(ref _heartbeatTicks);
-                    if (ticks > 0 && (DateTime.UtcNow.Ticks - ticks) > TimeSpan.TicksPerSecond * 10)
+                    int allowedSeconds = state == BlackoutState.Arming ? 60 : 10;
+                    if (ticks > 0 && (DateTime.UtcNow.Ticks - ticks) > TimeSpan.TicksPerSecond * allowedSeconds)
                     {
                         string detail = string.Format(
-                            "UI heartbeat stalled.\r\nState: {0}\r\nHeartbeat age: {1:0.0}s\r\nLast log: {2}\r\n",
+                            "UI heartbeat stalled.\r\nState: {0}\r\nHeartbeat age: {1:0.0}s\r\nAllowed: {2}s\r\nLast log: {3}\r\n",
                             state,
                             TimeSpan.FromTicks(DateTime.UtcNow.Ticks - ticks).TotalSeconds,
+                            allowedSeconds,
                             Log.LastMessage);
                         string crashPath = CrashLog.Write("watchdog-ui-heartbeat", detail);
-                        Log.Error("UI 心跳超过 10 秒未更新（状态 {0}），将终止进程以解除黑屏；崩溃报告：{1}", state, crashPath);
+                        Log.Error("UI 心跳超过 {0} 秒未更新（状态 {1}），将终止进程以解除黑屏；崩溃报告：{2}", allowedSeconds, state, crashPath);
+                        EmergencyRestoreBacklight();
                         AudioMuteService.EmergencyRestoreFromDisk();
                         Native.TerminateProcess(Native.GetCurrentProcess(), 1);
                         return;

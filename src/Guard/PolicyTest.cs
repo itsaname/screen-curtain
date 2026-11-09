@@ -127,16 +127,28 @@ namespace ScreenCurtain
         {
             StringBuilder result = new StringBuilder();
             bool passed = true;
+            string trace = Environment.GetEnvironmentVariable("SCREENCURTAIN_RESULT_FILE");
+            if (string.IsNullOrWhiteSpace(trace)) trace = Path.Combine(Path.GetTempPath(), "ScreenCurtain-policy-test.txt");
+            trace += ".trace";
             try
             {
+                File.WriteAllText(trace, "start\n");
                 result.AppendLine("ScreenCurtain policy snapshot/restore test (in-memory registry)");
                 result.AppendLine("Time: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
 
+                File.AppendAllText(trace, "test1\n");
                 passed &= TestNoExistingKey(result);
+                File.AppendAllText(trace, "test2\n");
                 passed &= TestExistingKey(result);
+                File.AppendAllText(trace, "test3\n");
                 passed &= TestExternalModification(result);
+                File.AppendAllText(trace, "test4\n");
                 passed &= TestOrphanRecovery(result);
+                File.AppendAllText(trace, "test5\n");
+                passed &= TestPauseResumeCrash(result);
+                File.AppendAllText(trace, "test6\n");
                 passed &= TestHealthCheck(result);
+                File.AppendAllText(trace, "done\n");
 
                 result.AppendLine("RESULT: " + (passed ? "PASS" : "FAIL"));
             }
@@ -255,9 +267,37 @@ namespace ScreenCurtain
             return ok;
         }
 
-        private static bool TestHealthCheck(StringBuilder result)
+        private static bool TestPauseResumeCrash(StringBuilder result)
         {
             bool ok = true;
+            ResetStore();
+            result.AppendLine();
+            result.AppendLine("[5] Pause/resume preserves backup, crash recovers originals");
+            IPolicyStore store = PolicyRegistry.Store;
+            store.SetValue(PolicyRegistry.PolicyKeyPath, "NoAutoUpdate", 0, RegistryValueKind.DWord);
+            store.SetValue(PolicyRegistry.PolicyKeyPath, "AlwaysAutoRebootAtScheduledTime", 1, RegistryValueKind.DWord);
+
+            PolicySnapshot snapshot = PolicyManager.Capture(1005);
+            snapshot.Save();
+            PolicyManager.ApplyTemporary();
+
+            // PAUSE restores the user's values but must keep the backup for a
+            // later crash during RESUME.
+            PolicyManager.Restore(snapshot, false);
+            ok &= Check(PolicySnapshot.HasBackup(), "pause keeps backup", result);
+            ok &= Check(ReadInt(store, "NoAutoUpdate", -1) == 0, "pause restored NoAutoUpdate", result);
+
+            // RESUME re-applies temporary values; simulate a crash now.
+            PolicyManager.ApplyTemporary();
+            PolicyManager.RecoverOrphaned();
+            ok &= Check(ReadInt(store, "NoAutoUpdate", -1) == 0, "crash after resume restores NoAutoUpdate", result);
+            ok &= Check(ReadInt(store, "AlwaysAutoRebootAtScheduledTime", -1) == 1, "crash after resume restores Always", result);
+            ok &= Check(!PolicySnapshot.HasBackup(), "orphan recovery clears backup", result);
+            return ok;
+        }
+
+        private static bool TestHealthCheck(StringBuilder result)
+        {            bool ok = true;
             ResetStore();
             result.AppendLine();
             result.AppendLine("[5] Health check reapplies temporary policy");

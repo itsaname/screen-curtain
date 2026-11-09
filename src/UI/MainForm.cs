@@ -32,6 +32,7 @@ namespace ScreenCurtain
         private readonly ToggleSwitch _wakeToggle;
         private readonly ToggleSwitch _wheelToggle;
         private readonly ToggleSwitch _muteToggle;
+        private readonly Timer _autoBlackoutTimer;
 
         private HotkeySpec _hotkey;
         private GuardState _guardState = GuardState.Off;
@@ -42,6 +43,9 @@ namespace ScreenCurtain
         private bool _exiting;
         private bool _updatingUi;
         private bool _minimizeBalloonShown;
+        private bool _sessionLocked;
+        private bool _autoBlackoutBusy;
+        private DateTime _autoBlackoutSuppressedUntil;
         private string _pendingNotice;
         private bool _pendingNoticeIsError;
 
@@ -263,6 +267,11 @@ namespace ScreenCurtain
             UpdateToggles();
             UpdateHotkeyText();
 
+            _autoBlackoutTimer = new Timer();
+            _autoBlackoutTimer.Interval = 5000;
+            _autoBlackoutTimer.Tick += AutoBlackoutTick;
+            _autoBlackoutTimer.Start();
+
             Shown += delegate
             {
                 UpdateDisplayCount();
@@ -270,7 +279,14 @@ namespace ScreenCurtain
                 {
                     WindowState = FormWindowState.Minimized;
                 }
-                if (_guard.State == GuardState.Off && _settings.GuardEnabled)
+                bool orphanedGuard = false;
+                try { orphanedGuard = PolicySnapshot.HasBackup(); } catch { }
+                if (_guard.State == GuardState.Off && orphanedGuard)
+                {
+                    EnableShutdownBlock(true);
+                    UpdateGuardUi(GuardState.Degraded, "检测到上次未恢复的 Windows Update 策略；请点击修复更新设置。");
+                }
+                else if (_guard.State == GuardState.Off && _settings.GuardEnabled)
                 {
                     StartGuard();
                 }
@@ -314,6 +330,7 @@ namespace ScreenCurtain
         public void PrepareExit()
         {
             _allowClose = true;
+            try { _autoBlackoutTimer.Stop(); } catch { }
             try { _blackout.SafeRestore("退出程序"); } catch { }
             try { _blackout.Dispose(); } catch { }
             try { ShutdownGuard.Active = false; ShutdownGuard.Clear(Handle); } catch { }
@@ -630,12 +647,13 @@ namespace ScreenCurtain
 
         private void StopGuard()
         {
-            _settings.GuardEnabled = false;
-            _settings.Save();
             try { _guard.Stop(); }
             catch (Exception ex) { Log.Exception("停止更新保护失败", ex); }
+            bool degraded = _guard.State == GuardState.Degraded;
+            _settings.GuardEnabled = degraded;
+            _settings.Save();
             EnableShutdownBlock(false);
-            if (_guard.State == GuardState.Degraded)
+            if (degraded)
             {
                 UpdateGuardUi(GuardState.Degraded, "更新设置恢复失败，请重试修复。");
             }
@@ -683,6 +701,50 @@ namespace ScreenCurtain
                 ShowNotice(error, true);
                 _notifier.Error(Localization.T("无法进入熄屏"), error);
             }
+        }
+
+        private void AutoBlackoutTick(object sender, EventArgs e)
+        {
+            if (_exiting || _autoBlackoutBusy || !_settings.AutoBlackoutEnabled) return;
+            if (_settings.FirstRun || _settings.AutoBlackoutMinutes <= 0) return;
+            if (_sessionLocked || _blackout.State != BlackoutState.Idle) return;
+            if (DateTime.UtcNow < _autoBlackoutSuppressedUntil) return;
+            if (HasModalDialog()) return;
+
+            uint idle = Native.GetIdleMilliseconds();
+            uint threshold = (uint)Math.Min(1440, _settings.AutoBlackoutMinutes) * 60u * 1000u;
+            if (idle < threshold) return;
+
+            _autoBlackoutBusy = true;
+            try
+            {
+                Log.Info("无键盘鼠标操作达到 {0} 分钟，自动进入熄屏", _settings.AutoBlackoutMinutes);
+                EnterBlackout();
+                _autoBlackoutSuppressedUntil = DateTime.UtcNow.AddSeconds(30);
+            }
+            finally
+            {
+                _autoBlackoutBusy = false;
+            }
+        }
+
+        private bool HasModalDialog()
+        {
+            try
+            {
+                for (int i = 0; i < Application.OpenForms.Count; i++)
+                {
+                    Form form = Application.OpenForms[i];
+                    if (form != null && form != this && form.Modal && form.Visible)
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch
+            {
+            }
+            return false;
         }
 
         private void OnBlackoutStateChanged(BlackoutState state)
@@ -949,14 +1011,29 @@ namespace ScreenCurtain
 
             if (m.Msg == Native.WM_WTSSESSION_CHANGE)
             {
-                try { _blackout.OnSessionChange(m.WParam.ToInt32()); } catch (Exception ex) { Log.Exception("处理会话变化失败", ex); }
+                int sessionCode = m.WParam.ToInt32();
+                if (sessionCode == Native.WTS_SESSION_LOCK)
+                {
+                    _sessionLocked = true;
+                }
+                else if (sessionCode == Native.WTS_SESSION_UNLOCK)
+                {
+                    _sessionLocked = false;
+                    _autoBlackoutSuppressedUntil = DateTime.UtcNow.AddSeconds(10);
+                }
+                try { _blackout.OnSessionChange(sessionCode); } catch (Exception ex) { Log.Exception("处理会话变化失败", ex); }
                 base.WndProc(ref m);
                 return;
             }
 
             if (m.Msg == Native.WM_POWERBROADCAST)
             {
-                try { _blackout.OnPowerBroadcast(m.WParam.ToInt32()); } catch (Exception ex) { Log.Exception("处理电源事件失败", ex); }
+                int powerCode = m.WParam.ToInt32();
+                if (powerCode == Native.PBT_APMRESUMEAUTOMATIC || powerCode == Native.PBT_APMRESUMESUSPEND)
+                {
+                    _autoBlackoutSuppressedUntil = DateTime.UtcNow.AddSeconds(10);
+                }
+                try { _blackout.OnPowerBroadcast(powerCode); } catch (Exception ex) { Log.Exception("处理电源事件失败", ex); }
                 base.WndProc(ref m);
                 return;
             }
@@ -968,6 +1045,8 @@ namespace ScreenCurtain
         {
             if (disposing)
             {
+                try { _autoBlackoutTimer.Stop(); } catch { }
+                try { _autoBlackoutTimer.Dispose(); } catch { }
                 try { _blackout.Dispose(); } catch { }
                 try { _guard.StatusChanged -= OnGuardStatusChanged; } catch { }
                 try { _tray.Dispose(); } catch { }

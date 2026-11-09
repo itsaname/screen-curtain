@@ -94,7 +94,7 @@ namespace ScreenCurtain
             }
         }
 
-        public static void Restore(PolicySnapshot snapshot)
+        public static void Restore(PolicySnapshot snapshot, bool clearBackup = true)
         {
             if (snapshot == null)
             {
@@ -173,20 +173,46 @@ namespace ScreenCurtain
             {
                 Log.Warn(skipMessage);
             }
-            PolicySnapshot.Clear();
+            if (clearBackup)
+            {
+                PolicySnapshot.Clear();
+            }
             Log.Info("Windows Update 策略恢复完成");
         }
 
-        public static void RecoverOrphaned()
+        public static bool RecoverOrphaned(int currentParentPid = 0)
         {
             PolicySnapshot snapshot = PolicySnapshot.Load();
             if (snapshot == null)
             {
-                return;
+                return true;
+            }
+
+            if (currentParentPid > 0 && snapshot.ParentPid > 0 &&
+                snapshot.ParentPid != currentParentPid && IsProcessAlive(snapshot.ParentPid))
+            {
+                Log.Warn("发现属于仍在运行的其它幕帘实例的策略备份（PID={0}），跳过恢复", snapshot.ParentPid);
+                return false;
             }
 
             Log.Warn("发现上次未恢复的 Windows Update 策略备份，开始恢复");
             Restore(snapshot);
+            return true;
+        }
+
+        private static bool IsProcessAlive(int pid)
+        {
+            try
+            {
+                using (System.Diagnostics.Process process = System.Diagnostics.Process.GetProcessById(pid))
+                {
+                    return !process.HasExited;
+                }
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static bool IsTemporaryValue(object current, int expected)

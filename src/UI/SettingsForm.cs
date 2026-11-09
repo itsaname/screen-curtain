@@ -304,6 +304,49 @@ namespace ScreenCurtain
                 _settings.Save();
             });
 
+            AddSection("自动熄屏", ref y);
+            AddToggle("无键盘鼠标操作后自动熄屏", "连续一段时间没有键盘或鼠标输入时，自动进入熄屏。锁屏、设置对话框打开或已经熄屏时不会触发。", ref y, _settings.AutoBlackoutEnabled, delegate(bool value)
+            {
+                _settings.AutoBlackoutEnabled = value;
+                _settings.Save();
+            });
+            AddLabel("自动熄屏等待时间", "可编辑，范围 1–1440 分钟。", ref y);
+            TextBox autoMinutes = new TextBox();
+            autoMinutes.TextAlign = HorizontalAlignment.Center;
+            autoMinutes.BorderStyle = BorderStyle.FixedSingle;
+            autoMinutes.BackColor = AppTheme.Surface;
+            autoMinutes.ForeColor = AppTheme.TextPrimary;
+            autoMinutes.Text = _settings.AutoBlackoutMinutes.ToString();
+            autoMinutes.SetBounds(22, y, 72, 28);
+            autoMinutes.KeyPress += delegate(object sender, KeyPressEventArgs e)
+            {
+                if (!char.IsControl(e.KeyChar) && !char.IsDigit(e.KeyChar)) e.Handled = true;
+            };
+            autoMinutes.TextChanged += delegate
+            {
+                if (_loading) return;
+                int value;
+                if (int.TryParse(autoMinutes.Text, out value) && value >= 1 && value <= 1440)
+                {
+                    _settings.AutoBlackoutMinutes = value;
+                    _settings.Save();
+                }
+            };
+            autoMinutes.Leave += delegate
+            {
+                int value;
+                if (!int.TryParse(autoMinutes.Text, out value)) value = 15;
+                value = Math.Max(1, Math.Min(1440, value));
+                autoMinutes.Text = value.ToString();
+                _settings.AutoBlackoutMinutes = value;
+                _settings.Save();
+            };
+            _pagePanel.Controls.Add(autoMinutes);
+            Label autoUnit = AppTheme.CreateLabel(Localization.T("分钟"), AppTheme.BodyFont, AppTheme.TextSecondary);
+            autoUnit.SetBounds(102, y + 3, 80, 22);
+            _pagePanel.Controls.Add(autoUnit);
+            y += 40;
+
             AddSection("显示器与预览", ref y);
             int count;
             try { count = DisplayManager.Enumerate().Count; } catch { count = 0; }

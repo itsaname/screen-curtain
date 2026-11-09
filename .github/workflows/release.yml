@@ -1,4 +1,4 @@
-name: Release v1.3.1
+name: Release v1.3.3
 
 on:
   push:
@@ -17,11 +17,11 @@ jobs:
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.3.1
-          name: ScreenCurtain 1.3.1
-          body_path: dist/1.3.1/RELEASE-NOTES.md
+          tag_name: v1.3.3
+          name: ScreenCurtain 1.3.3
+          body_path: dist/1.3.3/RELEASE-NOTES.md
           files: |
-            dist/1.3.1/installer/ScreenCurtain-Setup-1.3.1.exe
-            dist/1.3.1/portable/ScreenCurtain-1.3.1-portable.zip
-            dist/1.3.1/SHA256SUMS.txt
+            dist/1.3.3/installer/ScreenCurtain-Setup-1.3.3.exe
+            dist/1.3.3/portable/ScreenCurtain-1.3.3-portable.zip
+            dist/1.3.3/SHA256SUMS.txt
           fail_on_unmatched_files: true

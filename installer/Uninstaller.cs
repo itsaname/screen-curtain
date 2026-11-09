@@ -116,6 +116,7 @@ namespace ScreenCurtain.Setup
         public void Remove(bool deleteUserData)
         {
             ValidateSafeInstall();
+            DeleteOwnedFiles();
             ShellIntegration.RemoveShortcuts();
             InstallRegistry.Unregister();
             if (deleteUserData)
@@ -124,6 +125,67 @@ namespace ScreenCurtain.Setup
             }
 
             ScheduleSelfDelete();
+        }
+
+        private static readonly string[] KnownFiles = new string[]
+        {
+            SetupInfo.AppExe,
+            SetupInfo.AppConfig,
+            "README.md",
+            SetupInfo.UninstallerExe
+        };
+
+        private void DeleteOwnedFiles()
+        {
+            InstallManifestData manifest = InstallManifest.Load(InstallDir);
+            string[] files = manifest != null ? manifest.Files.ToArray() : KnownFiles;
+            for (int i = 0; i < files.Length; i++)
+            {
+                string relative = files[i];
+                if (!InstallManifest.IsSafeRelativePath(InstallDir, relative))
+                {
+                    SetupLog.Write("跳过不安全的卸载路径: {0}", relative);
+                    continue;
+                }
+                if (string.Equals(relative, SetupInfo.UninstallerExe, StringComparison.OrdinalIgnoreCase))
+                {
+                    // The running uninstaller is removed by ScheduleSelfDelete.
+                    continue;
+                }
+                try
+                {
+                    string path = Path.Combine(InstallDir, relative);
+                    if (File.Exists(path)) File.Delete(path);
+                }
+                catch (Exception ex)
+                {
+                    SetupLog.Write("删除安装文件失败: {0}: {1}", relative, ex.Message);
+                }
+            }
+
+            try
+            {
+                string manifestPath = Path.Combine(InstallDir, SetupInfo.ManifestFile);
+                if (File.Exists(manifestPath)) File.Delete(manifestPath);
+            }
+            catch (Exception ex)
+            {
+                SetupLog.Write("删除安装清单失败: {0}", ex.Message);
+            }
+
+            try
+            {
+                if (Directory.Exists(InstallDir) &&
+                    Directory.GetFiles(InstallDir).Length == 0 &&
+                    Directory.GetDirectories(InstallDir).Length == 0)
+                {
+                    Directory.Delete(InstallDir);
+                }
+            }
+            catch (Exception ex)
+            {
+                SetupLog.Write("清理空安装目录失败: {0}", ex.Message);
+            }
         }
 
         private void ValidateSafeInstall()
@@ -173,7 +235,9 @@ namespace ScreenCurtain.Setup
         {
             try
             {
-                string command = "/c ping 127.0.0.1 -n 3 >nul & rmdir /s /q \"" + InstallDir + "\"";
+                string uninstaller = Path.Combine(InstallDir, SetupInfo.UninstallerExe);
+                string command = "/c ping 127.0.0.1 -n 3 >nul & del /f /q \"" + uninstaller +
+                                 "\" 2>nul & rmdir \"" + InstallDir + "\" 2>nul";
                 ProcessStartInfo info = new ProcessStartInfo();
                 info.FileName = Environment.GetEnvironmentVariable("ComSpec");
                 info.Arguments = command;
@@ -181,7 +245,7 @@ namespace ScreenCurtain.Setup
                 info.CreateNoWindow = true;
                 info.WindowStyle = ProcessWindowStyle.Hidden;
                 Process.Start(info);
-                SetupLog.Write("已安排退出后删除安装目录");
+                SetupLog.Write("已安排退出后删除卸载器；仅删除空安装目录");
             }
             catch (Exception ex)
             {

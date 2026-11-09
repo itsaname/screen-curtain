@@ -82,6 +82,13 @@ namespace ScreenCurtain.Setup
                     string destination = Path.Combine(installDir, Path.GetFileName(files[i]));
                     File.Copy(files[i], destination, true);
                 }
+                InstallManifest.Write(installDir, new string[]
+                {
+                    SetupInfo.AppExe,
+                    SetupInfo.AppConfig,
+                    SetupInfo.UninstallerExe,
+                    "README.md"
+                });
 
                 if (!options.NoShortcuts)
                 {

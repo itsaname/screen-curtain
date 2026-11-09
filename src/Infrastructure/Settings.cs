@@ -110,6 +110,8 @@ namespace ScreenCurtain
         public bool PreventSleep = true;
         public bool StartMinimized = false;
         public bool StartWithWindows = false;
+        public bool AutoBlackoutEnabled = false;
+        public int AutoBlackoutMinutes = 15;
         public string Language = "auto";
         public string Theme = "auto";
         public string GuardStartMode = "startup";
@@ -168,6 +170,8 @@ namespace ScreenCurtain
                 s.PreventSleep = ReadBool(values, "PreventSleep", s.PreventSleep);
                 s.StartMinimized = ReadBool(values, "StartMinimized", s.StartMinimized);
                 s.StartWithWindows = ReadBool(values, "StartWithWindows", s.StartWithWindows);
+                s.AutoBlackoutEnabled = ReadBool(values, "AutoBlackoutEnabled", s.AutoBlackoutEnabled);
+                s.AutoBlackoutMinutes = Math.Max(1, Math.Min(1440, ReadInt(values, "AutoBlackoutMinutes", s.AutoBlackoutMinutes)));
                 string language = ReadString(values, "Language", s.Language).ToLowerInvariant();
                 if (language == "zh" || language == "en" || language == "auto") s.Language = language;
                 string theme = ReadString(values, "Theme", s.Theme).ToLowerInvariant();
@@ -214,6 +218,8 @@ namespace ScreenCurtain
                     "PreventSleep=" + (PreventSleep ? "true" : "false"),
                     "StartMinimized=" + (StartMinimized ? "true" : "false"),
                     "StartWithWindows=" + (StartWithWindows ? "true" : "false"),
+                    "AutoBlackoutEnabled=" + (AutoBlackoutEnabled ? "true" : "false"),
+                    "AutoBlackoutMinutes=" + AutoBlackoutMinutes,
                     "Language=" + Language,
                     "Theme=" + Theme,
                     "GuardStartMode=" + GuardStartMode,
@@ -263,8 +269,7 @@ namespace ScreenCurtain
         }
 
         private static bool ReadBool(Dictionary<string, string> values, string key, bool defaultValue)
-        {
-            string raw;
+        {            string raw;
             if (!values.TryGetValue(key, out raw))
             {
                 return defaultValue;
@@ -283,6 +288,14 @@ namespace ScreenCurtain
                 return false;
             }
             return defaultValue;
+        }
+
+        private static int ReadInt(Dictionary<string, string> values, string key, int defaultValue)
+        {
+            string raw;
+            if (!values.TryGetValue(key, out raw)) return defaultValue;
+            int parsed;
+            return int.TryParse(raw, out parsed) ? parsed : defaultValue;
         }
 
         private static CloseAction ReadCloseAction(Dictionary<string, string> values, string key, CloseAction defaultValue)

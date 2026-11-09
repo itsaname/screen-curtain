@@ -10,6 +10,7 @@ namespace ScreenCurtain
         private static readonly object RestoreSync = new object();
         private static readonly object PolicySync = new object();
         private static readonly object WriteSync = new object();
+        private static readonly ManualResetEvent RestoreDone = new ManualResetEvent(false);
         private static bool _restored;
         private static volatile bool _paused;
         private static int _parentExitReported;
@@ -94,7 +95,11 @@ namespace ScreenCurtain
                 {
                     lock (PolicySync)
                     {
-                        PolicyManager.RecoverOrphaned();
+                        if (!PolicyManager.RecoverOrphaned(parentPid))
+                        {
+                            WriteLine(PipeProtocol.Degraded + " 检测到其它幕帘实例的更新策略备份，已停止启动");
+                            return;
+                        }
                         _snapshot = PolicyManager.Capture(parentPid);
                         _snapshot.Save();
                         if (startPaused)
@@ -167,7 +172,7 @@ namespace ScreenCurtain
                             {
                                 if (!_paused)
                                 {
-                                    PolicyManager.Restore(_snapshot);
+                                    PolicyManager.Restore(_snapshot, false);
                                     _paused = true;
                                     _healthFailures = 0;
                                 }
@@ -298,6 +303,7 @@ namespace ScreenCurtain
             {
                 if (_restored)
                 {
+                    RestoreDone.WaitOne(8000);
                     return;
                 }
                 _restored = true;
@@ -341,6 +347,7 @@ namespace ScreenCurtain
                 if (_writer != null) _writer.Flush();
             }
             catch { }
+            RestoreDone.Set();
             Environment.Exit(ok ? 0 : 2);
         }
 

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
@@ -71,10 +72,11 @@ namespace ScreenCurtain.Setup
     {
         public const string ProductName = "幕帘 ScreenCurtain";
         public const string ShortName = "幕帘";
-        public const string Version = "1.3.1";
+        public const string Version = "1.3.3";
         public const string AppExe = "ScreenCurtain.exe";
         public const string AppConfig = "ScreenCurtain.exe.config";
         public const string UninstallerExe = "Uninstall.exe";
+        public const string ManifestFile = ".screencurtain-install";
         public const string ArpKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\ScreenCurtain";
         public const string GuardBackupKey = @"SOFTWARE\ScreenCurtain\GuardBackup";
 
@@ -375,6 +377,87 @@ namespace ScreenCurtain.Setup
             catch
             {
                 return 1;
+            }
+        }
+    }
+
+    internal sealed class InstallManifestData
+    {
+        public string Guid;
+        public string Directory;
+        public readonly List<string> Files = new List<string>();
+    }
+
+    internal static class InstallManifest
+    {
+        public static void Write(string installDir, string[] relativeFiles)
+        {
+            string path = Path.Combine(installDir, SetupInfo.ManifestFile);
+            List<string> lines = new List<string>();
+            lines.Add("ScreenCurtainInstall=1");
+            lines.Add("Guid=" + Guid.NewGuid().ToString("N"));
+            lines.Add("Directory=" + Path.GetFullPath(installDir));
+            if (relativeFiles != null)
+            {
+                for (int i = 0; i < relativeFiles.Length; i++)
+                {
+                    string relative = relativeFiles[i];
+                    if (string.IsNullOrWhiteSpace(relative)) continue;
+                    lines.Add("File=" + relative);
+                }
+            }
+            File.WriteAllLines(path, lines.ToArray(), new UTF8Encoding(false));
+        }
+
+        public static InstallManifestData Load(string installDir)
+        {
+            try
+            {
+                string path = Path.Combine(installDir, SetupInfo.ManifestFile);
+                if (!File.Exists(path)) return null;
+                InstallManifestData data = new InstallManifestData();
+                string[] lines = File.ReadAllLines(path, Encoding.UTF8);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    string line = lines[i].Trim();
+                    if (line.Length == 0 || line.StartsWith("#", StringComparison.Ordinal)) continue;
+                    int eq = line.IndexOf('=');
+                    if (eq <= 0) continue;
+                    string key = line.Substring(0, eq).Trim();
+                    string value = line.Substring(eq + 1).Trim();
+                    if (string.Equals(key, "Guid", StringComparison.OrdinalIgnoreCase)) data.Guid = value;
+                    else if (string.Equals(key, "Directory", StringComparison.OrdinalIgnoreCase)) data.Directory = value;
+                    else if (string.Equals(key, "File", StringComparison.OrdinalIgnoreCase) && value.Length > 0) data.Files.Add(value);
+                }
+                if (string.IsNullOrWhiteSpace(data.Guid) || data.Files.Count == 0) return null;
+                if (!string.IsNullOrWhiteSpace(data.Directory) &&
+                    !string.Equals(Path.GetFullPath(data.Directory).TrimEnd(Path.DirectorySeparatorChar),
+                                   Path.GetFullPath(installDir).TrimEnd(Path.DirectorySeparatorChar),
+                                   StringComparison.OrdinalIgnoreCase))
+                {
+                    return null;
+                }
+                return data;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public static bool IsSafeRelativePath(string installDir, string relative)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(relative) || Path.IsPathRooted(relative)) return false;
+                string root = Path.GetFullPath(installDir).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                string full = Path.GetFullPath(Path.Combine(installDir, relative));
+                return full.StartsWith(root, StringComparison.OrdinalIgnoreCase) &&
+                       !string.Equals(full, Path.GetFullPath(installDir), StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
             }
         }
     }

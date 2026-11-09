@@ -141,6 +141,10 @@ namespace ScreenCurtain
                             state.DeviceName = d.DeviceName;
                             state.Level = current;
                             states.Add(state);
+                            // Persist after every successful panel so a crash
+                            // mid-loop still leaves enough information to
+                            // restore the panels that were already dimmed.
+                            SaveStates(states);
                             Log.Info("外接屏背光已设为 0：{0}（原亮度 {1}/{2}）",
                                 d.FriendlyName, current, maximum);
                         }

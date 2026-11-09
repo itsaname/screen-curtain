@@ -259,6 +259,26 @@ namespace ScreenCurtain
         [DllImport("user32.dll")]
         public static extern uint GetDpiForWindow(IntPtr hwnd);
 
+        [StructLayout(LayoutKind.Sequential)]
+        public struct LASTINPUTINFO
+        {
+            public uint cbSize;
+            public uint dwTime;
+        }
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
+
+        public static uint GetIdleMilliseconds()
+        {
+            LASTINPUTINFO info = new LASTINPUTINFO();
+            info.cbSize = (uint)Marshal.SizeOf(typeof(LASTINPUTINFO));
+            if (!GetLastInputInfo(ref info)) return 0;
+            uint now = unchecked((uint)Environment.TickCount);
+            return unchecked(now - info.dwTime);
+        }
+
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool SetWindowPos(
